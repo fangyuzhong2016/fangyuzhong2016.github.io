@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.0">
+<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|Roboto Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('https://fangyuzhong2016.github.io').hostname,
+    root: '/',
+    scheme: 'Mist',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":true},
+    bookmark: {"enable":true,"color":"#222","save":"auto"},
+    fancybox: true,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    comments: {"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="本篇文章介绍了Hadoop-IntelliJ-Plugin 插件设计思路和相关的实现；另外讲一下Intellij Plugin 插件开发说明">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hadoop-Intellij-Plugin插件整体设计和实现思路">
+<meta property="og:url" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;26&#x2F;IntellijPluginHadoop&#x2F;002-IntellijPluginHadoop&#x2F;index.html">
+<meta property="og:site_name" content="扫地老僧">
+<meta property="og:description" content="本篇文章介绍了Hadoop-IntelliJ-Plugin 插件设计思路和相关的实现；另外讲一下Intellij Plugin 插件开发说明">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;26&#x2F;IntellijPluginHadoop&#x2F;002-IntellijPluginHadoop&#x2F;1.png">
+<meta property="article:published_time" content="2017-07-26T08:16:38.000Z">
+<meta property="article:modified_time" content="2019-12-11T08:19:24.272Z">
+<meta property="article:author" content="扫地老僧">
+<meta property="article:tag" content="Intellij Plugin">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="IDEA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;26&#x2F;IntellijPluginHadoop&#x2F;002-IntellijPluginHadoop&#x2F;1.png">
+
+<link rel="canonical" href="https://fangyuzhong2016.github.io/2017/07/26/IntellijPluginHadoop/002-IntellijPluginHadoop/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>Hadoop-Intellij-Plugin插件整体设计和实现思路 | 扫地老僧</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="扫地老僧" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">扫地老僧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">内不随念转，外不为境迁</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">6</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">3</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">12</span></a>
+
+  </li>
+        <li class="menu-item menu-item-personalworks">
+
+    <a href="/personalworks/" rel="section"><i class="fa fa-fw fa-calendar"></i>个人作品</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="none"
+           placeholder="搜索..." spellcheck="false"
+           type="text" id="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://fangyuzhong2016.github.io/2017/07/26/IntellijPluginHadoop/002-IntellijPluginHadoop/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="扫地老僧">
+      <meta itemprop="description" content="内不随念转，外不为境迁">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="扫地老僧">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hadoop-Intellij-Plugin插件整体设计和实现思路
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-07-26 16:16:38" itemprop="dateCreated datePublished" datetime="2017-07-26T16:16:38+08:00">2017-07-26</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-11 16:19:24" itemprop="dateModified" datetime="2019-12-11T16:19:24+08:00">2019-12-11</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/" itemprop="url" rel="index">
+                    <span itemprop="name">个人作品</span>
+                  </a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">IntelliJ Plugin For Hadoop</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span><br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>9k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>8 分钟</span>
+            </span>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>&emsp;&emsp;上节，把Hadoop-IntelliJ-Plugin 插件项目做了一个简单的介绍，接下来，我将会使用几个篇幅，大致的讲解一下该插件的设计思路和相关的实现。</p>
+<h3 id="Hadoop-IntelliJ-Plugin-插件的需求"><a href="#Hadoop-IntelliJ-Plugin-插件的需求" class="headerlink" title="Hadoop-IntelliJ-Plugin 插件的需求"></a>Hadoop-IntelliJ-Plugin 插件的需求</h3><p>&emsp;&emsp;Hadoop-IntelliJ-Plugin 插件要实现的需求很简单，给定HDFS的访问地址，可以展示出HDFS文件系统相关对象、能够操作HDFS上的对象（创建、删除、下载和上传等）。具体的需求如下：<br>1、能够进行HDFS访问相关信息的配置<br>2、读取HDFS对象，以文件目录树的方式进行展示<br>3、对于目录，可以创建、删除、刷新、重命名和下载<br>4、对于文件，可以删除、下载和查看（目前不区分具体文件类型，查看文件，目前还没有实现<br>5、能够获取目录或者文件的相关属性信息进行展示<br>6、在操作HDFS对象（目录或文件）需要注意当前的权限设置<br>7、支持国际化多语言设置<br>8、方便快捷的使用Intellij 进行MapReduce的相关任务开发和调试（正在设计开发中）<br>Hadoop-Intellij-Plugin 是基于IntelliJ IDEA  开发的插件，因此需要熟悉IntelliJ IDEA的 插件开发。下面就简单介绍一下IDEA的插件开发。</p>
+<h3 id="IntelliJ-IDEA-的插件开发"><a href="#IntelliJ-IDEA-的插件开发" class="headerlink" title="IntelliJ IDEA 的插件开发"></a>IntelliJ IDEA 的插件开发</h3><p>&emsp;&emsp;IntelliJ IDEA  插件开发现在国内的资料比较少，目前最好的参考文档，就是官方SDK开发帮助，但目前也不知道是不是最新。做IDEA开发可以参考一下：<a href="http://www.jetbrains.org/intellij/sdk/docs/welcome.html" target="_blank" rel="noopener">http://www.jetbrains.org/intellij/sdk/docs/welcome.html</a><br>这里大致讲解一下，插件开发的需要弄清楚的几个概念，我就不具体详细说明插件开发步骤了。</p>
+<h4 id="IDEA插件组织结构"><a href="#IDEA插件组织结构" class="headerlink" title="IDEA插件组织结构"></a>IDEA插件组织结构</h4><p>&emsp;&emsp;IDEA Plugin  以.zip 结尾的压缩包，安装后，由插件文件内的一个.jar 构成的。该jar 为插件的核心文件，解压后，由 com 文件夹、META-INF 文件夹组成，如果开发的插件还有一些图标或者其他文件，都要存放到该包中。典型的插件目录结构如下：  </p>
+<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line">|-- .IntelliJIdea</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line">    |-- config</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line">        |-- Plugin</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line">            |-- lib</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line">                |-- HadoopIntellijPlugin-1.0.jar</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line">                    |-- com</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">                    |-- img</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">                    |-- META-INF</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">                       |-- plugin.xml</span></pre></td></tr></table></figure>
+
+<p>&emsp;&emsp;所有来自插件目录lib下的jar包，会被自动加入ClassPath中。了解该结构很重要，这涉及到后续插件开发完成后，插件安装包的制作。开发的插件，如果涉及到第三方jar包，那么在打安装包时，需要一起将这些依赖加入进去。为了加载各个插件的类文件，IDEA使用一个单独的类加载器。这允许各个插件使用同一类库的不同版本，即使相同的类库被IDEA或另一个插件使用。 默认情况下，IDEA的主要类加载器加载那些插件类加载器找不到的类。然而，在plugin.xml文件中，可以使用depends元素来指定一个插件依赖于另一个或更多其他插件。在这种情况下，那些（被依赖的）插件的类加载器将（优先）用来加载当前插件的类加载器找不到的类。这将允许一个插件引用另一个插件中的类。</p>
+<h4 id="插件相关组件说明"><a href="#插件相关组件说明" class="headerlink" title="插件相关组件说明"></a>插件相关组件说明</h4><p>&emsp;&emsp;在IDEA插件开发中，有3个级别组件：Application Component、Project Component、Module  Component<br>(1)、Application Component  应用程序级 组件，是IDEA启动时，就初始化的组件。可以从Application实例中使用getComponent(Class)方法来获取它们。定义Application 级别的插件，需要实现ApplicationComment 接口。需要实现 initComponent()、disposeComponent() 方法。如果ApplicationComponent组件不依赖与其他的Application组件，那么必须显示声明一个无参构造函数，进行组件的初始化；如果开发的ApplicationComponent依赖与其他的Application组件，应该指定依赖的Application作为构造函数的参数，以确保这些组件按照正确的顺序实例化保证依赖关系。ApplicationComponent组件 实现类，需要在插件配置文件plugin.xml中进行注册，以保证生效。配置文件中以 <code>&lt;application-components&gt; &lt;/application-components&gt;</code>  标记为ApplicationComponent ，后面的插件配置文件再讲。<br>(2)、Project Component IDEA工程Project级别组件，在IDEA加载一个Project的时候初始化。<br>   可以从Project实例中使用getComponent(Class)方法来获取他们。Project 级别的组件，需要实现 ProjectComponent 接口。并在 插件配置文件中使用<code>&lt;project-components&gt;&lt;/project-components&gt;</code> 标记注册。<br>(3)、Module  Component IDEA加载各个Project时为各个Module创建。<br>  ModuleComponent 组件实现类可以选择性的实现ModuleComponent接口。一个module Component 组件的构造器可以包含一个Module类型的参数，如果它需要一个module实例。还可以指定其他application-Component、project-Component或者module-Component组件作为参数。在插件配置文件中使用<code>&lt;module-components&gt;&lt;/module-components&gt;</code>标记注册。<br>  各个级别的组件名称可由getComponentName()方法获取。IDEA 开发的插件也就是这3种类型了。各个插件的组件都需要在插件的配置文件中注册实现类。<br>3、插件组件状态持久化<br>插件组件实现类中，如果实现了 PersistentStateComponent 接口，那么该插件组件的状态会被自动保存和加载。插件的状态会保存到哪个xml配置<br>文件中，可以在 实现类中使用@State和@Storage注解来指定。<br>可参考：<br><a href="http://www.jetbrains.org/intellij/sdk/docs/basics/persisting_state_of_components.html" target="_blank" rel="noopener">http://www.jetbrains.org/intellij/sdk/docs/basics/persisting_state_of_components.html</a></p>
+<h4 id="插件组件扩展点"><a href="#插件组件扩展点" class="headerlink" title="插件组件扩展点"></a>插件组件扩展点</h4><p>&emsp;&emsp;如果希望你开发的插件运行其他插件扩展功能，那在你开发的插件中，需要声明一个或者多个扩展点。每个扩展点定义允许访问这个扩展点的一个类和接口。在插件配置文件中，使用<code>&lt;extensions&gt;</code> 和<code>&lt;extensionPoints&gt;</code> 标记插件扩展点。<br>&emsp;&emsp;在<code>&lt;extensionPoints&gt;</code>节点，插入一个子元素<code>&lt;extensionPoint&gt;</code>，使用“name”、“beanClass”和“interface”属性来分别指定扩展点名和允许扩展插件功能的类或接口的名称。<br>①、对于<code>&lt;extensions&gt;</code>元素，设置defaultExtensionNs属性为以下一个值：<br>”com.intellij”，如果你的插件扩展IDEA内核功能点。<code>&lt;ID of a plugin&gt;</code>，如果你的插件扩展另一个插件的功能点。<br>②、向<code>&lt;extensions&gt;</code>元素增加一个新的子元素。 这个子元素名必须匹配扩展要访问的扩展点的名称。<br>③、根据扩展点的类型，你需要做如下中的一件：<br>如果扩展点是使用interface属性声明的，在新增的子元素中，设置implementation属性值为实现指定接口的类的名称。<br>如果扩展点是使用beanClass属性声明的，在新增的子元素中，设置所有有指定的类中被“@Attribute”标注注释的属性。<br>典型的扩展例子，如现在要在IDEA中增加一个浮动面板，那就需要扩展IDEA，插件配置代码片段：<br><img src="1.png" alt=""></p>
+<h4 id="插件Action动作"><a href="#插件Action动作" class="headerlink" title="插件Action动作"></a>插件Action动作</h4><p>&emsp;&emsp;插件动作Action，即插件的互交，也就是说，IDEA允许开发插件向IDEA的菜单栏、工具栏增加自己的菜单/工具实现。action 按照组被管理，一个组可以包含其他的组，一组Action可以形成一个工具栏和菜单，组的子组可以构成菜单的子菜单。自定义Action插件类，需要继承抽象类 AnAction， 实现actionPerformed 方法，将在菜单项或者工具栏按钮选中时调用。</p>
+<h4 id="插件服务"><a href="#插件服务" class="headerlink" title="插件服务"></a>插件服务</h4><p>&emsp;&emsp;IntelliJ IDEA提供服务的概念。一个服务是一个在你的插件调用ServiceManager类的getService方法时按需加载的插件组件。即使一个服务被请求多次，IntelliJ IDEA也保证每个服务只有一个实例被加载。一个服务必须在plugin.xml文件中指明接口和实现类。服务的实现类用于服务的实例化。<br>&emsp;&emsp;IntelliJ IDEA提供3类服务：application服务、project服务和module服务。要声明一个服务，你可以使用如下IDEA内核的扩展点：applicationService: 设计用来声明一个application服务；projectService: 设计用来声明一个project服务；moduleService: 设计用来声明一个module服务.<br>&emsp;&emsp;声明一个服务的相关配置：<br>&emsp;&emsp;①、向plugin.xml文件的<code>&lt;extensions&gt;</code>节点添加适当的子元素（<code>&lt;applicationService&gt;、&lt;projectService&gt;</code>或<code>&lt;moduleService&gt;</code>）；<br>&emsp;&emsp;②、在新增的子元素里，设置如下属性： serviceInterface: 指定服务接口类；serviceImplementation: 指定服务实现类。注意接口和实现类可以是同一个类。</p>
+<h3 id="插件配置"><a href="#插件配置" class="headerlink" title="插件配置"></a>插件配置</h3><p>下面列出 插件 hadoop-IntelliJ-Plugin 的配置文件，里面已经注明相关配置的项，可作为参考  </p>
+<pre><code><figure class="highlight xml"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;<span class="name">idea-plugin</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件的ID--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">id</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop<span class="tag">&lt;/<span class="name">id</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件的名称--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">name</span>&gt;</span>基于IntelliJ IDEA 的Hadoop插件<span class="tag">&lt;/<span class="name">name</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件的版本--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">version</span>&gt;</span>1.0.1000.1<span class="tag">&lt;/<span class="name">version</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件的作者描述--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">vendor</span> <span class="attr">email</span>=<span class="string">"906328924@qq.com"</span> <span class="attr">url</span>=<span class="string">"http://www.fangyuzhon.com"</span>&gt;</span>fangyuzhong<span class="tag">&lt;/<span class="name">vendor</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件描述--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">description</span>&gt;</span>&lt;![CDATA[</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line">      Enter short description for your plugin here.&lt;br&gt;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line">      &lt;em&gt;most HTML tags may be used&lt;/em&gt;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line">    ]]&gt;<span class="tag">&lt;/<span class="name">description</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件变更相关说明--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">change-notes</span>&gt;</span>&lt;![CDATA[</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line">      Add change notes here.&lt;br&gt;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line">      &lt;em&gt;most HTML tags may be used&lt;/em&gt;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line">    ]]&gt;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;/<span class="name">change-notes</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件编译的IDEA版本--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/build_number_ranges.html for description --&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">idea-version</span> <span class="attr">since-build</span>=<span class="string">"2017.2.1"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!-- please see http://www.jetbrains.org/intellij/sdk/docs/basics/getting_started/plugin_compatibility.html</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">25</span></pre></td><td class="code"><pre><span class="line"><span class="comment">      on how to target different products --&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">26</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!-- uncomment to enable plugin in all products</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">27</span></pre></td><td class="code"><pre><span class="line"><span class="comment">  &lt;depends&gt;com.intellij.modules.lang&lt;/depends&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">28</span></pre></td><td class="code"><pre><span class="line"><span class="comment">  --&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">29</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--Application 级别组件注册--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">30</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">application-components</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">31</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">32</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">implementation-class</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop.fsconnection.ConnectionCache<span class="tag">&lt;/<span class="name">implementation-class</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">33</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">34</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">35</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">implementation-class</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop.options.DefaultProjectSettingsManager<span class="tag">&lt;/<span class="name">implementation-class</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">36</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">37</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">38</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">implementation-class</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop.globalization.LocaleLanguageManager<span class="tag">&lt;/<span class="name">implementation-class</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">39</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">40</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;/<span class="name">application-components</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">41</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--Project级别组件注册--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">42</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">project-components</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">43</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">44</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">implementation-class</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop.fsbrowser.FileSystemBrowserManager<span class="tag">&lt;/<span class="name">implementation-class</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">45</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">46</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">47</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">implementation-class</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop.fsconnection.ConnectionManager<span class="tag">&lt;/<span class="name">implementation-class</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">48</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">49</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">50</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">implementation-class</span>&gt;</span>com.fangyuzhong.intelliJ.hadoop.options.ProjectSettingsManager<span class="tag">&lt;/<span class="name">implementation-class</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">51</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">component</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">52</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;/<span class="name">project-components</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">53</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件扩展点--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">54</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">extensions</span> <span class="attr">defaultExtensionNs</span>=<span class="string">"com.intellij"</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">55</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">&lt;!-- Add your extensions here --&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">56</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">toolWindow</span> <span class="attr">id</span>=<span class="string">"Hadoop FileSystem"</span> <span class="attr">icon</span>=<span class="string">"/img/hadoop-logo-16x16.png"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">57</span></pre></td><td class="code"><pre><span class="line"><span class="tag">                <span class="attr">anchor</span>=<span class="string">"left"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">58</span></pre></td><td class="code"><pre><span class="line"><span class="tag">                <span class="attr">factoryClass</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.FileSystemBrowserToolWindowFactory"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">59</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;/<span class="name">extensions</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">60</span></pre></td><td class="code"><pre><span class="line">  <span class="comment">&lt;!--插件的Action--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">61</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;<span class="name">actions</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">62</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">&lt;!-- Add your actions here --&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">63</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">group</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.MainMenu"</span> <span class="attr">text</span>=<span class="string">"_Hadoop"</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">64</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.ShowHadoopToolWindow"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">65</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.mainmenu.action.ShowHadoopToolWindowAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">66</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Hadoop 文件系统"</span> /&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">67</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.MainMenu.OpenSettings"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">68</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.mainmenu.action.MenuOpenSettingAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">69</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Settings"</span> /&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">70</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">separator</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">71</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.MainMenu.OpenAbout"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">72</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.mainmenu.action.OpenAboutPageAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">73</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"About"</span> /&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">74</span></pre></td><td class="code"><pre><span class="line">      <span class="comment">&lt;!--&lt;action id="HadoopNavigator.Actions.MainMenu.TestOpenObject"--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">75</span></pre></td><td class="code"><pre><span class="line">              <span class="comment">&lt;!--class="com.fangyuzhong.intelliJ.hadoop.mainmenu.action.TestOpenObjectAction"--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">76</span></pre></td><td class="code"><pre><span class="line">              <span class="comment">&lt;!--text="测试-打开" /&gt;--&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">77</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">add-to-group</span> <span class="attr">anchor</span>=<span class="string">"before"</span> <span class="attr">group-id</span>=<span class="string">"MainMenu"</span> <span class="attr">relative-to-action</span>=<span class="string">"HelpMenu"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">78</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">group</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">79</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;<span class="name">group</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.ActionGroup.Browser.Controls"</span> <span class="attr">text</span>=<span class="string">"Browser object properties"</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">80</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.OpenSettings"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">81</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.action.OpenSettingsAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">82</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Browser - Options"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">83</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">separator</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">84</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.NavigateBack"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">85</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.action.NavigateBackAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">86</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Browser - Back"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">87</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.NavigateForward"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">88</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.action.NavigateForwardAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">89</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Browser - Forward"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">90</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.ExpandTree"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">91</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.action.ExpandTreeAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">92</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Browser - Expand all"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">93</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.CollapseTree"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">94</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.action.CollapseTreeAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">95</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Browser - Collapse all"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">96</span></pre></td><td class="code"><pre><span class="line">      <span class="tag">&lt;<span class="name">action</span> <span class="attr">id</span>=<span class="string">"HadoopNavigator.Actions.Browser.ShowObjectProperties"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">97</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">class</span>=<span class="string">"com.fangyuzhong.intelliJ.hadoop.fsbrowser.action.ShowObjectPropertiesAction"</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">98</span></pre></td><td class="code"><pre><span class="line"><span class="tag">              <span class="attr">text</span>=<span class="string">"Browser - Show object properties"</span>/&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">99</span></pre></td><td class="code"><pre><span class="line">    <span class="tag">&lt;/<span class="name">group</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">100</span></pre></td><td class="code"><pre><span class="line">  <span class="tag">&lt;/<span class="name">actions</span>&gt;</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">101</span></pre></td><td class="code"><pre><span class="line"><span class="tag">&lt;/<span class="name">idea-plugin</span>&gt;</span></span></pre></td></tr></table></figure></code></pre>
+    </div>
+
+    
+    
+    
+
+   
+     <div>
+      <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------------------- 本文结束 </span>
+      <i class="fa fa-paw"></i>
+      <span> 感谢阅读 -----------------------</span>
+    </div>
+  
+</div>
+     </div>
+   
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\25\IntellijPluginHadoop\001-IntellijPluginHadoop\" rel="bookmark">Intellij  Plugin for Hadoop 项目简介</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\30\IntellijPluginHadoop\005-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现3</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\08\02\IntellijPluginHadoop\008-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----文件系统配置设计和实现1</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\31\IntellijPluginHadoop\006-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统连接Connection设计和实现</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\08\03\IntellijPluginHadoop\009-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----文件系统配置设计和实现2</a></div>
+    </li>
+  </ul>
+
+        <div class="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/wechatpay.jpg" alt="扫地老僧 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/alipay.jpg" alt="扫地老僧 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+        <!-- JS库 clipboard 拷贝内容到粘贴板-->
+<script src="https://cdn.bootcss.com/clipboard.js/2.0.1/clipboard.min.js"></script>
+
+<!-- JS库 sweetalert 显示提示信息-->
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+<ul class="post-copyright">
+  <!-- 本文标题 -->
+  <li>
+    <strong>本文标题： </strong>
+    Hadoop-Intellij-Plugin插件整体设计和实现思路
+  </li>
+
+  <!-- 本文作者 -->
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>
+    扫地老僧
+  </li>
+
+  <!-- 创建时间 -->
+  <li>
+    <strong>创建时间： </strong>
+    2017年07月26日 - 16时07分
+  </li>
+
+  <!-- 修改时间 -->
+  <li>
+    <strong>修改时间： </strong>
+    2019年12月11日 - 16时12分
+  </li>
+
+  <!-- 引用链接 -->
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://fangyuzhong2016.github.io/2017/07/26/IntellijPluginHadoop/002-IntellijPluginHadoop/" title="Hadoop-Intellij-Plugin插件整体设计和实现思路"
+      >https://fangyuzhong2016.github.io/2017/07/26/IntellijPluginHadoop/002-IntellijPluginHadoop/</a
+    >
+    <span class="copy-path" title="点击复制引用链接"
+      ><i
+        style="cursor: pointer"
+        class="fa fa-clipboard"
+        data-clipboard-text="[扫地老僧's Blog | Hadoop-Intellij-Plugin插件整体设计和实现思路](https://fangyuzhong2016.github.io/2017/07/26/IntellijPluginHadoop/002-IntellijPluginHadoop/)"
+        aria-label="post.copy_success"
+      ></i
+    ></span>
+  </li>
+
+  <!-- 版权声明 -->
+  <li class="post-copyright-license">
+    <strong
+      >版权声明：
+    </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+<script>
+  var clipboard = new ClipboardJS(".fa-clipboard");
+  clipboard.on("success", function(target) {
+    var message = document.createElement("div");
+    message.innerHTML =
+      '<i class="fa fa-check-circle message-icon"></i><span class="message-content">' +
+      target.trigger.getAttribute("aria-label") +
+      "</span>";
+    swal({
+      content: message,
+      className: "copy-success-message",
+      timer: 1000,
+      button: false
+    });
+  });
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Intellij-Plugin/" rel="tag"><i class="fa fa-tags"></i> Intellij Plugin</a>
+              <a href="/tags/Hadoop/" rel="tag"><i class="fa fa-tags"></i> Hadoop</a>
+              <a href="/tags/IDEA/" rel="tag"><i class="fa fa-tags"></i> IDEA</a>
+          </div>
+
+        
+  <div class="post-widgets">
+    <div class="wp_rating">
+      <div id="wpac-rating"></div>
+    </div>
+  </div>
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/07/25/IntellijPluginHadoop/001-IntellijPluginHadoop/" rel="prev" title="Intellij  Plugin for Hadoop 项目简介">
+      <i class="fa fa-chevron-left"></i> Intellij  Plugin for Hadoop 项目简介
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/07/28/IntellijPluginHadoop/003-IntellijPluginHadoop/" rel="next" title="Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现1">
+      Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现1 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-3"><a class="nav-link" href="#Hadoop-IntelliJ-Plugin-插件的需求"><span class="nav-number">1.</span> <span class="nav-text">Hadoop-IntelliJ-Plugin 插件的需求</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#IntelliJ-IDEA-的插件开发"><span class="nav-number">2.</span> <span class="nav-text">IntelliJ IDEA 的插件开发</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#IDEA插件组织结构"><span class="nav-number">2.1.</span> <span class="nav-text">IDEA插件组织结构</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#插件相关组件说明"><span class="nav-number">2.2.</span> <span class="nav-text">插件相关组件说明</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#插件组件扩展点"><span class="nav-number">2.3.</span> <span class="nav-text">插件组件扩展点</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#插件Action动作"><span class="nav-number">2.4.</span> <span class="nav-text">插件Action动作</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#插件服务"><span class="nav-number">2.5.</span> <span class="nav-text">插件服务</span></a></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#插件配置"><span class="nav-number">3.</span> <span class="nav-text">插件配置</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="扫地老僧"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">扫地老僧</p>
+  <div class="site-description" itemprop="description">内不随念转，外不为境迁</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/fangyuzhong2016" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;fangyuzhong2016" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:906328924@qq.com" title="E-Mail → mailto:906328924@qq.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="http://weibo.com/fangyuzhong" title="Weibo → http:&#x2F;&#x2F;weibo.com&#x2F;fangyuzhong" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <script
+  async
+  src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"
+></script>
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">扫地老僧</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+    <span title="站点总字数">97k</span>
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  
+  <script color='0,0,255' opacity='0.5' zIndex='-1' count='99' src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  <script src="/lib/anime.min.js"></script>
+  <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+<script src="/js/bookmark.js"></script>
+
+
+
+
+  
+
+
+
+  <script>
+  if (CONFIG.page.isPost) {
+    wpac_init = window.wpac_init || [];
+    wpac_init.push({
+      widget: 'Rating',
+      id: 22280,
+      el: 'wpac-rating',
+      color: 'fc6423'
+    });
+    (function() {
+      if ('WIDGETPACK_LOADED' in window) return;
+      WIDGETPACK_LOADED = true;
+      var mc = document.createElement('script');
+      mc.type = 'text/javascript';
+      mc.async = true;
+      mc.src = '//embed.widgetpack.com/widget.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(mc, s.nextSibling);
+    })();
+  }
+  </script>
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+  <script src="/js/wobblewindow.js"></script>
+  <script>
+    //只在桌面版网页启用特效
+    if( window.innerWidth > 768  ){
+      $(document).ready(function () {
+        
+          $('#header').wobbleWindow({
+            radius: 50,
+            movementTop: false,
+            movementLeft: false,
+            movementRight: false,
+            debug: true,
+          });
+        
+
+        
+
+        
+      });
+    }
+  </script>
+
+
+
+
+  <script async src="/js/cursor/fireworks.js"></script>
+
+
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+ 
+<script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment-precise-range-plugin@1.3.0/moment-precise-range.min.js"></script>
+<script>
+  function timer() {
+    var ages = moment.preciseDiff(moment(),moment(20170501,"YYYYMMDD"));
+    ages = ages.replace(/years?/, "年");
+    ages = ages.replace(/months?/, "月");
+    ages = ages.replace(/days?/, "天");
+    ages = ages.replace(/hours?/, "小时");
+    ages = ages.replace(/minutes?/, "分");
+    ages = ages.replace(/seconds?/, "秒");
+    ages = ages.replace(/\d+/g, '<span style="color:#1890ff">$&</span>');
+    div.innerHTML = `我已在此等候你 ${ages}`;
+  }
+  var div = document.createElement("div");
+  //插入到copyright之后
+  var copyright = document.querySelector(".copyright");
+  document.querySelector(".footer-inner").insertBefore(div, copyright.nextSibling);
+  timer();
+  setInterval("timer()",1000)
+</script>
+
+</body>
+</html>

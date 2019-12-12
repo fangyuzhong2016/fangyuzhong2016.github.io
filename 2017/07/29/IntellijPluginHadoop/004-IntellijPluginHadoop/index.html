@@ -1,0 +1,806 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=2">
+<meta name="theme-color" content="#222">
+<meta name="generator" content="Hexo 4.1.0">
+<script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+  <link rel="apple-touch-icon" sizes="180x180" href="/images/apple-touch-icon-next.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/images/favicon-32x32-next.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/images/favicon-16x16-next.png">
+  <link rel="mask-icon" href="/images/logo.svg" color="#222">
+
+<link rel="stylesheet" href="/css/main.css">
+
+<link rel="stylesheet" href="//fonts.googleapis.com/css?family=Lato:300,300italic,400,400italic,700,700italic|Microsoft YaHei:300,300italic,400,400italic,700,700italic|Roboto Mono:300,300italic,400,400italic,700,700italic&display=swap&subset=latin,latin-ext">
+<link rel="stylesheet" href="/lib/font-awesome/css/font-awesome.min.css">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.css">
+  <link rel="stylesheet" href="/lib/pace/pace-theme-minimal.min.css">
+  <script src="/lib/pace/pace.min.js"></script>
+
+
+<script id="hexo-configurations">
+  var NexT = window.NexT || {};
+  var CONFIG = {
+    hostname: new URL('https://fangyuzhong2016.github.io').hostname,
+    root: '/',
+    scheme: 'Mist',
+    version: '7.6.0',
+    exturl: false,
+    sidebar: {"position":"left","display":"post","padding":18,"offset":12,"onmobile":false},
+    copycode: {"enable":false,"show_result":false,"style":null},
+    back2top: {"enable":true,"sidebar":false,"scrollpercent":true},
+    bookmark: {"enable":true,"color":"#222","save":"auto"},
+    fancybox: true,
+    mediumzoom: false,
+    lazyload: false,
+    pangu: false,
+    comments: {"style":"tabs","active":null,"storage":true,"lazyload":false,"nav":null},
+    algolia: {
+      appID: '',
+      apiKey: '',
+      indexName: '',
+      hits: {"per_page":10},
+      labels: {"input_placeholder":"Search for Posts","hits_empty":"We didn't find any results for the search: ${query}","hits_stats":"${hits} results found in ${time} ms"}
+    },
+    localsearch: {"enable":true,"trigger":"auto","top_n_per_article":1,"unescape":false,"preload":false},
+    path: 'search.xml',
+    motion: {"enable":true,"async":false,"transition":{"post_block":"fadeIn","post_header":"slideDownIn","post_body":"slideDownIn","coll_header":"slideLeftIn","sidebar":"slideUpIn"}}
+  };
+</script>
+
+  <meta name="description" content="本节，将详细说明一下文件系统树UI层的展示设计和实现。文件系统对象以树的方式展示，在IntelliJ 框架内，文件树依附于浮动面板，即IntelliJ 的ToolWindow 插件。UI需要有层次感，IntelliJ  的 ToolWindow 作为文件系统UI的最底层，由IDEA 框架去维护和控制；在ToolWindow上面，需要有个主窗体ToolWindowForm，该窗体上将会呈现文件系统T">
+<meta property="og:type" content="article">
+<meta property="og:title" content="Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现2">
+<meta property="og:url" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;29&#x2F;IntellijPluginHadoop&#x2F;004-IntellijPluginHadoop&#x2F;index.html">
+<meta property="og:site_name" content="扫地老僧">
+<meta property="og:description" content="本节，将详细说明一下文件系统树UI层的展示设计和实现。文件系统对象以树的方式展示，在IntelliJ 框架内，文件树依附于浮动面板，即IntelliJ 的ToolWindow 插件。UI需要有层次感，IntelliJ  的 ToolWindow 作为文件系统UI的最底层，由IDEA 框架去维护和控制；在ToolWindow上面，需要有个主窗体ToolWindowForm，该窗体上将会呈现文件系统T">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;29&#x2F;IntellijPluginHadoop&#x2F;004-IntellijPluginHadoop&#x2F;1.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;29&#x2F;IntellijPluginHadoop&#x2F;004-IntellijPluginHadoop&#x2F;2.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;29&#x2F;IntellijPluginHadoop&#x2F;004-IntellijPluginHadoop&#x2F;3.png">
+<meta property="og:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;29&#x2F;IntellijPluginHadoop&#x2F;004-IntellijPluginHadoop&#x2F;4.png">
+<meta property="article:published_time" content="2017-07-29T08:17:12.000Z">
+<meta property="article:modified_time" content="2019-12-11T08:19:46.981Z">
+<meta property="article:author" content="扫地老僧">
+<meta property="article:tag" content="Intellij Plugin">
+<meta property="article:tag" content="Hadoop">
+<meta property="article:tag" content="IDEA">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https:&#x2F;&#x2F;fangyuzhong2016.github.io&#x2F;2017&#x2F;07&#x2F;29&#x2F;IntellijPluginHadoop&#x2F;004-IntellijPluginHadoop&#x2F;1.png">
+
+<link rel="canonical" href="https://fangyuzhong2016.github.io/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/">
+
+
+<script id="page-configurations">
+  // https://hexo.io/docs/variables.html
+  CONFIG.page = {
+    sidebar: "",
+    isHome: false,
+    isPost: true
+  };
+</script>
+
+  <title>Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现2 | 扫地老僧</title>
+  
+
+
+
+
+
+
+  <noscript>
+  <style>
+  .use-motion .brand,
+  .use-motion .menu-item,
+  .sidebar-inner,
+  .use-motion .post-block,
+  .use-motion .pagination,
+  .use-motion .comments,
+  .use-motion .post-header,
+  .use-motion .post-body,
+  .use-motion .collection-header { opacity: initial; }
+
+  .use-motion .site-title,
+  .use-motion .site-subtitle {
+    opacity: initial;
+    top: initial;
+  }
+
+  .use-motion .logo-line-before i { left: initial; }
+  .use-motion .logo-line-after i { right: initial; }
+  </style>
+</noscript>
+
+<link rel="alternate" href="/atom.xml" title="扫地老僧" type="application/atom+xml">
+</head>
+
+<body itemscope itemtype="http://schema.org/WebPage">
+  <div class="container use-motion">
+    <div class="headband"></div>
+
+    <header class="header" itemscope itemtype="http://schema.org/WPHeader">
+      <div class="header-inner"><div class="site-brand-container">
+  <div class="site-meta">
+
+    <div>
+      <a href="/" class="brand" rel="start">
+        <span class="logo-line-before"><i></i></span>
+        <span class="site-title">扫地老僧</span>
+        <span class="logo-line-after"><i></i></span>
+      </a>
+    </div>
+        <p class="site-subtitle">内不随念转，外不为境迁</p>
+  </div>
+
+  <div class="site-nav-toggle">
+    <div class="toggle" aria-label="切换导航栏">
+      <span class="toggle-line toggle-line-first"></span>
+      <span class="toggle-line toggle-line-middle"></span>
+      <span class="toggle-line toggle-line-last"></span>
+    </div>
+  </div>
+</div>
+
+
+<nav class="site-nav">
+  
+  <ul id="menu" class="menu">
+        <li class="menu-item menu-item-home">
+
+    <a href="/" rel="section"><i class="fa fa-fw fa-home"></i>首页</a>
+
+  </li>
+        <li class="menu-item menu-item-about">
+
+    <a href="/about/" rel="section"><i class="fa fa-fw fa-user"></i>关于</a>
+
+  </li>
+        <li class="menu-item menu-item-tags">
+
+    <a href="/tags/" rel="section"><i class="fa fa-fw fa-tags"></i>标签<span class="badge">6</span></a>
+
+  </li>
+        <li class="menu-item menu-item-categories">
+
+    <a href="/categories/" rel="section"><i class="fa fa-fw fa-th"></i>分类<span class="badge">3</span></a>
+
+  </li>
+        <li class="menu-item menu-item-archives">
+
+    <a href="/archives/" rel="section"><i class="fa fa-fw fa-archive"></i>归档<span class="badge">12</span></a>
+
+  </li>
+        <li class="menu-item menu-item-personalworks">
+
+    <a href="/personalworks/" rel="section"><i class="fa fa-fw fa-calendar"></i>个人作品</a>
+
+  </li>
+      <li class="menu-item menu-item-search">
+        <a role="button" class="popup-trigger"><i class="fa fa-search fa-fw"></i>搜索
+        </a>
+      </li>
+  </ul>
+
+</nav>
+  <div class="site-search">
+    <div class="popup search-popup">
+    <div class="search-header">
+  <span class="search-icon">
+    <i class="fa fa-search"></i>
+  </span>
+  <div class="search-input-container">
+    <input autocomplete="off" autocorrect="off" autocapitalize="none"
+           placeholder="搜索..." spellcheck="false"
+           type="text" id="search-input">
+  </div>
+  <span class="popup-btn-close">
+    <i class="fa fa-times-circle"></i>
+  </span>
+</div>
+<div id="search-result"></div>
+
+</div>
+<div class="search-pop-overlay"></div>
+
+  </div>
+
+
+</div>
+    </header>
+
+    
+  <div class="back-to-top">
+    <i class="fa fa-arrow-up"></i>
+    <span>0%</span>
+  </div>
+  <div class="reading-progress-bar"></div>
+  <a role="button" class="book-mark-link book-mark-link-fixed"></a>
+
+
+    <main class="main">
+      <div class="main-inner">
+        <div class="content-wrap">
+          
+
+          <div class="content">
+            
+
+  <div class="posts-expand">
+      
+  
+  
+  <article itemscope itemtype="http://schema.org/Article" class="post-block " lang="zh-CN">
+    <link itemprop="mainEntityOfPage" href="https://fangyuzhong2016.github.io/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/">
+
+    <span hidden itemprop="author" itemscope itemtype="http://schema.org/Person">
+      <meta itemprop="image" content="/images/avatar.png">
+      <meta itemprop="name" content="扫地老僧">
+      <meta itemprop="description" content="内不随念转，外不为境迁">
+    </span>
+
+    <span hidden itemprop="publisher" itemscope itemtype="http://schema.org/Organization">
+      <meta itemprop="name" content="扫地老僧">
+    </span>
+      <header class="post-header">
+        <h1 class="post-title" itemprop="name headline">
+          Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现2
+        </h1>
+
+        <div class="post-meta">
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-calendar-o"></i>
+              </span>
+              <span class="post-meta-item-text">发表于</span>
+
+              <time title="创建时间：2017-07-29 16:17:12" itemprop="dateCreated datePublished" datetime="2017-07-29T16:17:12+08:00">2017-07-29</time>
+            </span>
+              <span class="post-meta-item">
+                <span class="post-meta-item-icon">
+                  <i class="fa fa-calendar-check-o"></i>
+                </span>
+                <span class="post-meta-item-text">更新于</span>
+                <time title="修改时间：2019-12-11 16:19:46" itemprop="dateModified" datetime="2019-12-11T16:19:46+08:00">2019-12-11</time>
+              </span>
+            <span class="post-meta-item">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-folder-o"></i>
+              </span>
+              <span class="post-meta-item-text">分类于</span>
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/" itemprop="url" rel="index">
+                    <span itemprop="name">个人作品</span>
+                  </a>
+                </span>
+                  ，
+                <span itemprop="about" itemscope itemtype="http://schema.org/Thing">
+                  <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/" itemprop="url" rel="index">
+                    <span itemprop="name">IntelliJ Plugin For Hadoop</span>
+                  </a>
+                </span>
+            </span>
+
+          
+            <span class="post-meta-item" title="阅读次数" id="busuanzi_container_page_pv" style="display: none;">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-eye"></i>
+              </span>
+              <span class="post-meta-item-text">阅读次数：</span>
+              <span id="busuanzi_value_page_pv"></span>
+            </span><br>
+            <span class="post-meta-item" title="本文字数">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-file-word-o"></i>
+              </span>
+                <span class="post-meta-item-text">本文字数：</span>
+              <span>14k</span>
+            </span>
+            <span class="post-meta-item" title="阅读时长">
+              <span class="post-meta-item-icon">
+                <i class="fa fa-clock-o"></i>
+              </span>
+                <span class="post-meta-item-text">阅读时长 &asymp;</span>
+              <span>13 分钟</span>
+            </span>
+        </div>
+      </header>
+
+    
+    
+    
+    <div class="post-body" itemprop="articleBody">
+
+      
+        <p>&emsp;&emsp;本节，将详细说明一下文件系统树UI层的展示设计和实现。文件系统对象以树的方式展示，在IntelliJ 框架内，文件树依附于浮动面板，即IntelliJ 的ToolWindow 插件。UI需要有层次感，IntelliJ  的 ToolWindow 作为文件系统UI的最底层，由IDEA 框架去维护和控制；在ToolWindow上面，需要有个主窗体ToolWindowForm，该窗体上将会呈现文件系统Tree的UI和文件系统对象的相关属性UI；由于可能存在多个连接，连接到HDFS，因此会存在多个文件系统Tree，因此文件系统Tree 的UI将分为两种方式呈现，一种以Tab列表的方式平铺，另一种，以单个树根节点的方式呈现，因此，需要有TabbedBrowsForm  和 SimpleBrowserForm 两种UI，在这两种UI之上，才真正显示出文件系统的Tree控件。因此本节也将从这几个方面来介绍。<br>文件系统树UI整体设计的类图如下：<br><img src="1.png" alt=""></p>
+<h2 id="文件系统树FileSystemBrowserTree及其渲染类FileSystemBrowserTreeCellRenderer"><a href="#文件系统树FileSystemBrowserTree及其渲染类FileSystemBrowserTreeCellRenderer" class="headerlink" title="文件系统树FileSystemBrowserTree及其渲染类FileSystemBrowserTreeCellRenderer"></a>文件系统树FileSystemBrowserTree及其渲染类FileSystemBrowserTreeCellRenderer</h2><p>&emsp;&emsp;FileSystemBrowserTree 类为树的控件类，继承了 FileSystemTree 类，FileSystemTree继承了IDEA本身的Tree。FileSystemBrowserTree 类定义了对文件系统Tree的相关操作，包括获取TreeModel、进行树节点TreeNode的导航（前一节点、后一节点）、树节点TreeNode的折叠和展开、鼠标悬停TreeNode的提示文字、获取选中的TreeNode、TreeNode选中的事件通知、TreeNode的鼠标事件、TreeNode的键盘事件等。下面就Tree的初始化和右键菜单做详细说明。</p>
+<h3 id="FileSystemBrowserTree的初始化方法"><a href="#FileSystemBrowserTree的初始化方法" class="headerlink" title="FileSystemBrowserTree的初始化方法"></a>FileSystemBrowserTree的初始化方法</h3><p>&emsp;&emsp;初始化中包括鼠标、键盘、选择事件的注册、设置根节点的可见性、设置Tree的相关滚动条、设置Tree渲染方式，初始化代码如下：  </p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 初始化树控件</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> treeModel</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">FileSystemBrowserTree</span><span class="params">(BrowserTreeModel treeModel)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">super</span>(treeModel);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//注册监听事件</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">    addKeyListener(<span class="keyword">this</span>.keyListener);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line">    addMouseListener(<span class="keyword">this</span>.mouseListener);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line">    addTreeSelectionListener(<span class="keyword">this</span>.treeSelectionListener);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line">    setToggleClickCount(<span class="number">0</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line">    setRootVisible(treeModel <span class="keyword">instanceof</span> TabbedBrowserTreeModel);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line">    setShowsRootHandles(<span class="keyword">true</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line">    setAutoscrolls(<span class="keyword">true</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//设置TreeNode的渲染器</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line">    FileSystemBrowserTreeCellRenderer browserTreeCellRenderer = <span class="keyword">new</span> FileSystemBrowserTreeCellRenderer(treeModel.getProject());</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line">    setCellRenderer(browserTreeCellRenderer);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line">    FileSystemBrowserTreeSpeedSearch speedSearch = <span class="keyword">new</span> FileSystemBrowserTreeSpeedSearch(<span class="keyword">this</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//注册相关需要释放的资源对象</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line">    Disposer.register(<span class="keyword">this</span>, speedSearch);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line">    Disposer.register(<span class="keyword">this</span>, treeModel);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line">    Disposer.register(<span class="keyword">this</span>, <span class="keyword">this</span>.navigationHistory);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr></table></figure>
+<h3 id="TreeNode的右键菜单设计"><a href="#TreeNode的右键菜单设计" class="headerlink" title="TreeNode的右键菜单设计"></a>TreeNode的右键菜单设计</h3><p>&emsp;&emsp;当选中树的某个节点，根据其节点类型，显示不同的右键菜单项。目前节点只有两种类型，一是文件系统对象的集合类型，即FIleSystemObjectBundle，该类型特指整个HDFS根目录下(“/“)的所有对象(包括目录和文件)；二是文件系统的对象，目录或者文件，这里为简单起见，文件不区分具体的类型。每种类型显示哪些右键菜单，在本节后面介绍。右键菜单展示，需要在TreeNode的鼠标选中节点右键释放后处理。在处理过程中使用了多线程操作。定义内部类MouseListener 封装了 整个鼠标事件处理，其中方法 mouseReleased(final MouseEvent event)  实现了右键菜单的展示，代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment">     *鼠标释放事件</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment">     * <span class="doctag">@param</span> event</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment">     */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">mouseReleased</span><span class="params">(<span class="keyword">final</span> MouseEvent event)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function">    </span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">if</span> (event.getButton() == <span class="number">3</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">            TreePath path = FileSystemBrowserTree.<span class="keyword">this</span>.getPathForLocation(event.getX(), event.getY());</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line">            <span class="keyword">if</span> (path != <span class="keyword">null</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line">            &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line">                <span class="keyword">final</span> FileSystemBrowserTreeNode lastPathEntity = (FileSystemBrowserTreeNode) path.getLastPathComponent();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line">                <span class="keyword">if</span> (lastPathEntity.isDisposed())</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line">                &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line">                    <span class="keyword">return</span>;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line">                &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line">                <span class="comment">//开启一个右键菜单判断操作线程</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line">                <span class="keyword">new</span> ModalTask(lastPathEntity.getProject(), <span class="string">"Loading fsobject information"</span>, <span class="keyword">true</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line">                &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line">                    <span class="comment">//进行TreeNode的类型判断，并实例化菜单的Action</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line">                    <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(@NotNull ProgressIndicator progressIndicator)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line"><span class="function">                    </span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line">                        ActionGroup actionGroup = <span class="keyword">null</span>;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line">                        <span class="keyword">if</span> ((lastPathEntity <span class="keyword">instanceof</span> FileSystemObject))</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">25</span></pre></td><td class="code"><pre><span class="line">                        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">26</span></pre></td><td class="code"><pre><span class="line">                            <span class="comment">//文件系统对象节点，右键菜单</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">27</span></pre></td><td class="code"><pre><span class="line">                            FileSystemObject object = (FileSystemObject) lastPathEntity;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">28</span></pre></td><td class="code"><pre><span class="line">                            actionGroup = <span class="keyword">new</span> ObjectActionGroup(object);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">29</span></pre></td><td class="code"><pre><span class="line">                        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">30</span></pre></td><td class="code"><pre><span class="line">                        <span class="keyword">else</span> <span class="keyword">if</span> ((lastPathEntity <span class="keyword">instanceof</span> FileSystemObjectBundle))</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">31</span></pre></td><td class="code"><pre><span class="line">                        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">32</span></pre></td><td class="code"><pre><span class="line">                            <span class="comment">//文件系统对象集合节点</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">33</span></pre></td><td class="code"><pre><span class="line">                            FileSystemObjectBundle objectsBundle = (FileSystemObjectBundle) lastPathEntity;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">34</span></pre></td><td class="code"><pre><span class="line">                            ConnectionHandler connectionHandler = objectsBundle.getConnectionHandler();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">35</span></pre></td><td class="code"><pre><span class="line">                            actionGroup = <span class="keyword">new</span> ConnectionActionGroup(connectionHandler);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">36</span></pre></td><td class="code"><pre><span class="line">                        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">37</span></pre></td><td class="code"><pre><span class="line">                        <span class="keyword">if</span> ((actionGroup != <span class="keyword">null</span>) &amp;&amp; (!progressIndicator.isCanceled()))</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">38</span></pre></td><td class="code"><pre><span class="line">                        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">39</span></pre></td><td class="code"><pre><span class="line">                            <span class="comment">//开启显示右键菜单操作线程</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">40</span></pre></td><td class="code"><pre><span class="line">                            ActionPopupMenu actionPopupMenu = ActionManager.getInstance().createActionPopupMenu(<span class="string">""</span>, actionGroup);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">41</span></pre></td><td class="code"><pre><span class="line">                            popupMenu = actionPopupMenu.getComponent();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">42</span></pre></td><td class="code"><pre><span class="line">                            <span class="keyword">new</span> SimpleLaterInvocator()</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">43</span></pre></td><td class="code"><pre><span class="line">                            &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">44</span></pre></td><td class="code"><pre><span class="line">                                <span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">45</span></pre></td><td class="code"><pre><span class="line"><span class="function">                                </span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">46</span></pre></td><td class="code"><pre><span class="line">                                    <span class="keyword">if</span> (FileSystemBrowserTree.<span class="keyword">this</span>.isShowing())</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">47</span></pre></td><td class="code"><pre><span class="line">                                    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">48</span></pre></td><td class="code"><pre><span class="line">                                        popupMenu.show(FileSystemBrowserTree.<span class="keyword">this</span>,event.getX(),event.getY());</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">49</span></pre></td><td class="code"><pre><span class="line">                                    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">50</span></pre></td><td class="code"><pre><span class="line">                                &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">51</span></pre></td><td class="code"><pre><span class="line">                            &#125;.start();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">52</span></pre></td><td class="code"><pre><span class="line">                        &#125; <span class="keyword">else</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">53</span></pre></td><td class="code"><pre><span class="line">                        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">54</span></pre></td><td class="code"><pre><span class="line">                            FileSystemBrowserTree.<span class="keyword">this</span>.popupMenu = <span class="keyword">null</span>;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">55</span></pre></td><td class="code"><pre><span class="line">                        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">56</span></pre></td><td class="code"><pre><span class="line">                    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">57</span></pre></td><td class="code"><pre><span class="line">                &#125;.start();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">58</span></pre></td><td class="code"><pre><span class="line">            &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">59</span></pre></td><td class="code"><pre><span class="line">        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">60</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">61</span></pre></td><td class="code"><pre><span class="line">&#125;;</span></pre></td></tr></table></figure>
+<h3 id="TreeNode的渲染器类-FileSystemBrowserTreeCellRenderer"><a href="#TreeNode的渲染器类-FileSystemBrowserTreeCellRenderer" class="headerlink" title="TreeNode的渲染器类 FileSystemBrowserTreeCellRenderer"></a>TreeNode的渲染器类 FileSystemBrowserTreeCellRenderer</h3><p>&emsp;&emsp;如果要改变TreeNode的显示方式要使用到TreeCellRender，通过对它的实现才能够得到不同显示方式的Tree。这里自定义继承 TreeCellRender 类，实现了TreeNode 节点的图标显示、文字显示等。在FileSystemBrowserTreeCellRenderer 类中重写了 Component getTreeCellRendererComponent(JTree tree, Object value, boolean selected, boolean expanded, boolean leaf, int row, boolean hasFocus) 方法。该方法返回一个Component这个控件，也就是你要设置的树中节点的显示风格，当然在实现的时候你可以继承一个Jcomponent类的子类，也可以在类中设置一个私有变量然后返回。<br>&emsp;&emsp;在这个方法中有很多参数，首先是Jtree 这个就是你要设置的树，对应的对象，然后是value ，这个其实是节点，通过他你可以获得节点的数据，以及对应的子节点父节点等。接着是selected表示如果被选中时该如何显示。Expanded则表示如果出于扩展状态如何显示节点，然后是leaf，叶子节点的显示方式可以通过这个条件设置；row这个参数，如果有伸缩的话，row是随时改变的，最后一个hasFocus是是否拥有焦点，设置拥有焦点时的显示方式。实现了这个方法后，用setCellRende()方法设置一下这个类的实例就行了。详细可参见该类的代码…./src/main/java/com/fangyuzhong/intelliJ/hadoop/fsbrowser/ui/FileSystemBrowserTreeCellRenderer.java</p>
+<h2 id="文件系统主窗体设计"><a href="#文件系统主窗体设计" class="headerlink" title="文件系统主窗体设计"></a>文件系统主窗体设计</h2><p>&emsp;&emsp;文件系统主窗体UI设计分为三个部分，一个是ToolWindow 上呈现的UI：BrowserToolWindowForm，该窗体为容器，这个窗体上，将构建Tree的显示UI和文件系统对象的属性显示UI；第二个是 展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm；第三部分是文件对象属性展示UI：ObjectPropertiesForm。三部分都是UI界面，IDEA开发UI界面使用 GUI Form的开发方式。主界面UI采用XML来描述，类的文件名后面加”.form”构成，UI界面可以使用控件进行拖拽，UI背后的业务逻辑 使用和该类同名的java 文件描述。IDEA这么做，无非就是想摆脱繁琐的Swing代码，微软的WPF技术也是同样使用这种方法。</p>
+<h3 id="展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm"><a href="#展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm" class="headerlink" title="展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm"></a>展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm</h3><p>&emsp;&emsp;当用户选择以Tab列表的方式展现多个HDFS连接，那么使用TabbedBrowserForm来展示，当用户选择以单个树控件多个根节点方式展现多个HDFS连接，那么使用SimpleBrowserForm方式来展示,TabbedBrowserForm展示方法借助于SimpleBrowserForm，两个窗体都继承抽象FileSystemBrowserFrom。<br>&emsp;&emsp;抽象类FileSystemBrowserFrom 继承了项目中自定义的窗体基类。在FileSystemBrowserFrom 中有三个重要的抽象方法：<br>①、public abstract FileSystemBrowserTree getBrowserTree()  :获取文件系统树Tree控件对象<br>②、public abstract void selectElement(FileSystemBrowserTreeNode paramBrowserTreeNode, boolean paramBoolean1, boolean paramBoolean2);   设置选中的Tree的元素<br>③、public abstract void rebuildTree();  构建Tree控件<br>三个抽象方法均在TabbedBrowserForm和SimpleBrowserForm 中具体实现。</p>
+<h4 id="SimpleBrowserForm类"><a href="#SimpleBrowserForm类" class="headerlink" title="SimpleBrowserForm类"></a>SimpleBrowserForm类</h4><p>&emsp;&emsp;该类比较简单，在UI上，有个主面板Jpanel ，放置FileSystemBrowserTree控件，这是UI最基础的部分，Tree控件始终是在这个UI上的，TabbedBrowserForm也是借助该窗体进行展示，只不过会根据HDFS连接个数 new 这个窗体，放到Tab页上而已。使用SimpleBrowserTreeModel实例化一个FileSystemBrowserTree控件，初始化代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 使用SimpleBrowserTreeModel，初始化</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> parentComponent</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">SimpleBrowserForm</span><span class="params">(DisposableProjectComponent parentComponent)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>(parentComponent, <span class="keyword">new</span> SimpleBrowserTreeModel(parentComponent.getProject(), ConnectionManager.getInstance(parentComponent.getProject()).getConnectionBundle()));</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * TabbedBrowserTreeModel，初始化</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> parentComponent</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> connectionHandler</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">SimpleBrowserForm</span><span class="params">(DisposableProjectComponent parentComponent, ConnectionHandler connectionHandler)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>(parentComponent, <span class="keyword">new</span> TabbedBrowserTreeModel(connectionHandler));</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> *初始化，使用BrowserTreeModel 创建文件树控件对象FileSystemBrowserTree</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> parentComponent</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> treeModel</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="title">SimpleBrowserForm</span><span class="params">(DisposableProjectComponent parentComponent, BrowserTreeModel treeModel)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">25</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">super</span>(parentComponent);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">26</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserTree = <span class="keyword">new</span> FileSystemBrowserTree(treeModel);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">27</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserScrollPane.setViewportView(<span class="keyword">this</span>.browserTree);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">28</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserScrollPane.setBorder(<span class="keyword">new</span> EmptyBorder(<span class="number">1</span>, <span class="number">0</span>, <span class="number">0</span>, <span class="number">0</span>));</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">29</span></pre></td><td class="code"><pre><span class="line">    ToolTipManager.sharedInstance().registerComponent(<span class="keyword">this</span>.browserTree);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">30</span></pre></td><td class="code"><pre><span class="line">    Disposer.register(<span class="keyword">this</span>, <span class="keyword">this</span>.browserTree);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">31</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr></table></figure>
+<p>重写了抽象类的3个抽象方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 获取FileSystemBrowserTree对象</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> FileSystemBrowserTree <span class="title">getBrowserTree</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">return</span> <span class="keyword">this</span>.browserTree;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 设置选中树元素</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">selectElement</span><span class="params">(FileSystemBrowserTreeNode treeNode, <span class="keyword">boolean</span> focus, <span class="keyword">boolean</span> scroll)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserTree.selectElement(treeNode, focus);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 构建Tree</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">rebuildTree</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserTree.getModel().getRoot().rebuildTreeChildren();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr></table></figure>
+
+<h4 id="TabbedBrowserForm类"><a href="#TabbedBrowserForm类" class="headerlink" title="TabbedBrowserForm类"></a>TabbedBrowserForm类</h4><p>&emsp;&emsp;该类，将用户创建的多个HDFS连接，以Tab页(列表)的方式呈现。因此界面UI有两个控件，一个是主面板mainPanel,一个是自定义开发 tab 控件 TabbedPane 。  </p>
+<h5 id="该类的初始化。"><a href="#该类的初始化。" class="headerlink" title="该类的初始化。"></a>该类的初始化。</h5><p>&emsp;&emsp;首先创建一个TabbedPane 控件，注册相关事件监听器；然后调用initTabs()方法根据连接数创建各个连接的Tab页。initTabs()方法中，通过HDFS连接管理类，获取当前HDFS连接集合，然后遍历连接集合，读取每个连接，创建一个Tab页面，并且实例化一个SimpleBrowserForm窗体，放到tab页面上；最后，将TabbedPane 加入到主面板中，完成整个UI的构建。初始化代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 初始化</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> parentComponent</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">TabbedBrowserForm</span><span class="params">(BrowserToolWindowForm parentComponent)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">super</span>(parentComponent);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.connectionTabs = <span class="keyword">new</span> TabbedPane(<span class="keyword">this</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">    initTabs();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.connectionTabs.addListener(<span class="keyword">new</span> TabsListener() &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line">       <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">selectionChanged</span><span class="params">(TabInfo oldSelection, TabInfo newSelection)</span></span>&#123;&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line">       <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">beforeSelectionChanged</span><span class="params">(TabInfo oldSelection, TabInfo newSelection)</span></span>&#123;&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line">       <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">tabRemoved</span><span class="params">(TabInfo tabInfo)</span> </span>&#123;&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line">       <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">tabsMoved</span><span class="params">()</span></span>&#123;&#125;&#125;);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line">    Disposer.register(<span class="keyword">this</span>, <span class="keyword">this</span>.connectionTabs);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line"></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 初始化Tab 列表</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">private</span> <span class="keyword">void</span> <span class="title">initTabs</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line">    Project project = getProject();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line">    TabbedPane oldConnectionTabs = <span class="keyword">this</span>.connectionTabs;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">25</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.connectionTabs = <span class="keyword">new</span> TabbedPane(<span class="keyword">this</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">26</span></pre></td><td class="code"><pre><span class="line">    ConnectionManager connectionManager = ConnectionManager.getInstance(project);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">27</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//获取HDFS连接集合，遍历连接集合，读取每个连接，创建一个Tab页面</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">28</span></pre></td><td class="code"><pre><span class="line">    ConnectionBundle connectionBundle = connectionManager.getConnectionBundle();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">29</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">for</span> (ConnectionHandler connectionHandler : connectionBundle.getConnectionHandlers())</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">30</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">31</span></pre></td><td class="code"><pre><span class="line">        <span class="comment">//根据每个连接，实例化一个 SimpleBrowserForm，放到一个新的Tab页上</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">32</span></pre></td><td class="code"><pre><span class="line">        SimpleBrowserForm browserForm = <span class="keyword">new</span> SimpleBrowserForm(<span class="keyword">this</span>, connectionHandler);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">33</span></pre></td><td class="code"><pre><span class="line">        JComponent component = browserForm.getComponent();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">34</span></pre></td><td class="code"><pre><span class="line">        TabInfo tabInfo = <span class="keyword">new</span> TabInfo(component);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">35</span></pre></td><td class="code"><pre><span class="line">        tabInfo.setText(CommonUtil.nvl(connectionHandler.getName(), <span class="string">"[unnamed fsconnection]"</span>));</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">36</span></pre></td><td class="code"><pre><span class="line">        tabInfo.setObject(browserForm);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">37</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">this</span>.connectionTabs.addTab(tabInfo);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">38</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">39</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//添加connectiontab 到主面板控件mainPanel</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">40</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">if</span> (<span class="keyword">this</span>.connectionTabs.getTabCount() == <span class="number">0</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">41</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">42</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">this</span>.mainPanel.removeAll();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">43</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">this</span>.mainPanel.add(<span class="keyword">new</span> JBList(<span class="keyword">new</span> ArrayList()), <span class="string">"Center"</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">44</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">45</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">else</span> <span class="keyword">if</span> (<span class="keyword">this</span>.mainPanel.getComponentCount() &gt; <span class="number">0</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">46</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">47</span></pre></td><td class="code"><pre><span class="line">        Component component = <span class="keyword">this</span>.mainPanel.getComponent(<span class="number">0</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">48</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">if</span> (component != <span class="keyword">this</span>.connectionTabs)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">49</span></pre></td><td class="code"><pre><span class="line">        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">50</span></pre></td><td class="code"><pre><span class="line">            <span class="keyword">this</span>.mainPanel.removeAll();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">51</span></pre></td><td class="code"><pre><span class="line">            <span class="keyword">this</span>.mainPanel.add(<span class="keyword">this</span>.connectionTabs, <span class="string">"Center"</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">52</span></pre></td><td class="code"><pre><span class="line">        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">53</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">54</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">else</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">55</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">56</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">this</span>.mainPanel.add(<span class="keyword">this</span>.connectionTabs, <span class="string">"Center"</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">57</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">58</span></pre></td><td class="code"><pre><span class="line">    DisposerUtil.dispose(oldConnectionTabs);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">59</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr></table></figure>
+
+<h5 id="重写基类的抽象方法"><a href="#重写基类的抽象方法" class="headerlink" title="重写基类的抽象方法"></a>重写基类的抽象方法</h5><p>&emsp;&emsp;由于是以Tab列表的方式展现Tree，在任何时候，只有一个Tab页是激活的，因此，在获取FileSystemBrowserTree对象，有两种方法，一是获取当前激活的Tab上的Tree，二是，获取指定HDFS连接所在的Tree。选中树元素和构建树，就可以调用SimpleBrowserForm 的相关方法了。具体代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 获取当前活动的Tree</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> FileSystemBrowserTree <span class="title">getBrowserTree</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">return</span> getActiveBrowserTree();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 获取指定连接的Tree</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> connectionHandler</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> FileSystemBrowserTree <span class="title">getBrowserTree</span><span class="params">(ConnectionHandler connectionHandler)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line">    SimpleBrowserForm browserForm = getBrowserForm(connectionHandler);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">return</span> browserForm == <span class="keyword">null</span> ? <span class="keyword">null</span> : browserForm.getBrowserTree();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 获取当前激活的Tree</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@return</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">25</span></pre></td><td class="code"><pre><span class="line"><span class="meta">@Nullable</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">26</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> FileSystemBrowserTree <span class="title">getActiveBrowserTree</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">27</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">28</span></pre></td><td class="code"><pre><span class="line">    TabInfo tabInfo = <span class="keyword">this</span>.connectionTabs.getSelectedInfo();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">29</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">if</span> (tabInfo != <span class="keyword">null</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">30</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">31</span></pre></td><td class="code"><pre><span class="line">        SimpleBrowserForm browserForm = (SimpleBrowserForm) tabInfo.getObject();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">32</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">return</span> browserForm.getBrowserTree();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">33</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">34</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">return</span> <span class="keyword">null</span>;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">35</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">36</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">37</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 设置选中元素</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">38</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> treeNode</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">39</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> focus</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">40</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> scroll</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">41</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">42</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">selectElement</span><span class="params">(FileSystemBrowserTreeNode treeNode, <span class="keyword">boolean</span> focus, <span class="keyword">boolean</span> scroll)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">43</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">44</span></pre></td><td class="code"><pre><span class="line">    ConnectionHandler connectionHandler = treeNode.getConnectionHandler();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">45</span></pre></td><td class="code"><pre><span class="line">    SimpleBrowserForm browserForm = getBrowserForm(connectionHandler);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">46</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">if</span> (browserForm != <span class="keyword">null</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">47</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">48</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">this</span>.connectionTabs.select(browserForm.getComponent(), focus);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">49</span></pre></td><td class="code"><pre><span class="line">        <span class="keyword">if</span> (scroll)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">50</span></pre></td><td class="code"><pre><span class="line">        &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">51</span></pre></td><td class="code"><pre><span class="line">            browserForm.selectElement(treeNode, focus, scroll);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">52</span></pre></td><td class="code"><pre><span class="line">        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">53</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">54</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">55</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">56</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 构建树</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">57</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">58</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">rebuildTree</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">59</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">60</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">for</span> (TabInfo tabInfo : <span class="keyword">this</span>.connectionTabs.getTabs())</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">61</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">62</span></pre></td><td class="code"><pre><span class="line">        SimpleBrowserForm browserForm = (SimpleBrowserForm) tabInfo.getObject();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">63</span></pre></td><td class="code"><pre><span class="line">        browserForm.rebuildTree();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">64</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">65</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr></table></figure>
+<h3 id="主窗体UI，BrowserToolWindowForm。"><a href="#主窗体UI，BrowserToolWindowForm。" class="headerlink" title="主窗体UI，BrowserToolWindowForm。"></a>主窗体UI，BrowserToolWindowForm。</h3><p>&emsp;&emsp; 该类，将Tree的UI和文件系统对象属性UI及其工具栏的Action组合起来。界面UI上，有个主面板 mainPanel、存放FileSystemBrowserForm面板 browserPanel、存放ObjectProperties的面板 objectPropertiesPanel。在初始化中，先注册显示方式设置的监听，然后调用 rebuild()方法，构建Tree 的UI组件；最后添加工具栏的Action，初始化代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">2</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 初始化</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">3</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * <span class="doctag">@param</span> project</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">4</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">5</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="title">BrowserToolWindowForm</span><span class="params">(Project project)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">6</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">7</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">super</span>(project);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">8</span></pre></td><td class="code"><pre><span class="line"></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">9</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">/*</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">10</span></pre></td><td class="code"><pre><span class="line"><span class="comment">    注册显示方式设置监听</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">11</span></pre></td><td class="code"><pre><span class="line"><span class="comment">     */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">12</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.displayModeSettingsListener = <span class="keyword">new</span> DisplayModeSettingsListener()</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">13</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">14</span></pre></td><td class="code"><pre><span class="line">        <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">displayModeChanged</span><span class="params">(BrowserDisplayMode displayMode)</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">15</span></pre></td><td class="code"><pre><span class="line"><span class="function">        </span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">16</span></pre></td><td class="code"><pre><span class="line">            <span class="keyword">if</span> (BrowserToolWindowForm.<span class="keyword">this</span>.getDisplayMode() != displayMode)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">17</span></pre></td><td class="code"><pre><span class="line">            &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">18</span></pre></td><td class="code"><pre><span class="line">                BrowserToolWindowForm.<span class="keyword">this</span>.setDisplayMode(displayMode);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">19</span></pre></td><td class="code"><pre><span class="line">                BrowserToolWindowForm.<span class="keyword">this</span>.rebuild();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">20</span></pre></td><td class="code"><pre><span class="line">            &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">21</span></pre></td><td class="code"><pre><span class="line">        &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">22</span></pre></td><td class="code"><pre><span class="line">    &#125;;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">23</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//构建UI</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">24</span></pre></td><td class="code"><pre><span class="line">    rebuild();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">25</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//添加工具栏</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">26</span></pre></td><td class="code"><pre><span class="line">    ActionToolbar actionToolbar = ActionUtil.createActionToolbar(<span class="string">""</span>, <span class="keyword">true</span>,</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">27</span></pre></td><td class="code"><pre><span class="line">            <span class="string">"HadoopNavigator.ActionGroup.Browser.Controls"</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">28</span></pre></td><td class="code"><pre><span class="line">    actionToolbar.setTargetComponent(<span class="keyword">this</span>.actionsPanel);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">29</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.actionsPanel.add(actionToolbar.getComponent());</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">30</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//添加文件对象属性显示UI</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">31</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.objectPropertiesPanel.setVisible(<span class="keyword">true</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">32</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.objectPropertiesForm = <span class="keyword">new</span> ObjectPropertiesForm(<span class="keyword">this</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">33</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.objectPropertiesPanel.add(<span class="keyword">this</span>.objectPropertiesForm.getComponent());</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">34</span></pre></td><td class="code"><pre><span class="line">    GuiUtils.replaceJSplitPaneWithIDEASplitter(<span class="keyword">this</span>.mainPanel);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">35</span></pre></td><td class="code"><pre><span class="line">    GUIUtil.updateSplitterProportion(<span class="keyword">this</span>.mainPanel, <span class="number">0.7F</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">36</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//通知显示方式设置修改</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">37</span></pre></td><td class="code"><pre><span class="line">    EventUtil.subscribe(project, <span class="keyword">this</span>, DisplayModeSettingsListener.TOPIC, <span class="keyword">this</span>.displayModeSettingsListener);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">38</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">39</span></pre></td><td class="code"><pre><span class="line"></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">40</span></pre></td><td class="code"><pre><span class="line"><span class="comment">/**</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">41</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> * 构建界面UI</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">42</span></pre></td><td class="code"><pre><span class="line"><span class="comment"> */</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">43</span></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">rebuild</span><span class="params">()</span></span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">44</span></pre></td><td class="code"><pre><span class="line"><span class="function"></span>&#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">45</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//获取文件树展示方式</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">46</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.displayMode = GeneralProjectSettings.getInstance(getProject()).</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">47</span></pre></td><td class="code"><pre><span class="line">            getBrowserSettings().getBrowserDisplayMode();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">48</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserPanel.removeAll();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">49</span></pre></td><td class="code"><pre><span class="line">    DisposerUtil.dispose(<span class="keyword">this</span>.browserForm);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">50</span></pre></td><td class="code"><pre><span class="line">    <span class="comment">//按照显示方式，创建Tree显示窗体</span></span></pre></td></tr><tr><td class="gutter"><pre><span class="line">51</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserForm = (<span class="keyword">this</span>.displayMode == BrowserDisplayMode.SINGLE ?</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">52</span></pre></td><td class="code"><pre><span class="line">            <span class="keyword">new</span> SimpleBrowserForm(<span class="keyword">this</span>) :</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">53</span></pre></td><td class="code"><pre><span class="line">            <span class="keyword">this</span>.displayMode == BrowserDisplayMode.TABBED ?</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">54</span></pre></td><td class="code"><pre><span class="line">                    <span class="keyword">new</span> TabbedBrowserForm(<span class="keyword">this</span>) : <span class="keyword">null</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">55</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserPanel.add(<span class="keyword">this</span>.browserForm.getComponent(), <span class="string">"Center"</span>);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">56</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserPanel.revalidate();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">57</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">this</span>.browserPanel.repaint();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">58</span></pre></td><td class="code"><pre><span class="line">    Disposer.register(<span class="keyword">this</span>, <span class="keyword">this</span>.browserForm);</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">59</span></pre></td><td class="code"><pre><span class="line">    <span class="keyword">if</span> (objectPropertiesForm != <span class="keyword">null</span>)</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">60</span></pre></td><td class="code"><pre><span class="line">    &#123;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">61</span></pre></td><td class="code"><pre><span class="line">        objectPropertiesForm.cleanObjectPropertiesShow();</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">62</span></pre></td><td class="code"><pre><span class="line">    &#125;</span></pre></td></tr><tr><td class="gutter"><pre><span class="line">63</span></pre></td><td class="code"><pre><span class="line">&#125;</span></pre></td></tr></table></figure>
+<h3 id="文件属性对象展示窗体ObjectPropertiesForm"><a href="#文件属性对象展示窗体ObjectPropertiesForm" class="headerlink" title="文件属性对象展示窗体ObjectPropertiesForm"></a>文件属性对象展示窗体ObjectPropertiesForm</h3><p>&emsp;&emsp;对于HDFS文件系统对象目录或者文件，显示其所有者、创建日期、文件或者目录大小、文件或者目录的路径、文件或目录备份数  。ObjectPropertiesForm窗体代码在fsobject 包中。到后续讲到FileSystemObject对象的时候再说吧，也比较简单。</p>
+<h3 id="文件系统界面上的工具栏Action。"><a href="#文件系统界面上的工具栏Action。" class="headerlink" title="文件系统界面上的工具栏Action。"></a>文件系统界面上的工具栏Action。</h3><p>&emsp;&emsp;工具栏功能包括，HDFS连接设置、TreeNode导航（前一节点、后一节点）、TreeNode的折叠和展开、隐藏和显示属性对象UI。所有的工具栏功能按钮都是Action插件对象。代码组织如下：<br><img src="2.png" alt=""></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>&emsp;&emsp;本节，从文件系统树的UI展示上做了说明，介绍了主窗体UI、Tab窗体UI、Simple窗体UI、文件系统对象属性ObjectProperties UI等。这部分主要集中在UI界面开发这块。前面说过，IDEA开发UI界面使用 GUI Form的开发方式，UI对象的布局保存在XML中，那么IDEA框架在运行插件的时候，怎么把UI布局的XML转换为Swing对象？这里需要注意一下：GUI布局文件，采用的是IDEA本身的编译器编译的，在IDEA设置中，找到GUI Designer 项，在Generate GUI into  选中 Java source Code ，如下下图，这样编译后，框架会把UI的XML布局自动生成代码插入到源码文件中：<br><img src="3.png" alt=""><br><img src="4.png" alt=""></p>
+
+    </div>
+
+    
+    
+    
+
+   
+     <div>
+      <div>
+  
+    <div style="text-align:center;color:#bfbfbf;font-size:16px;">
+      <span>----------------------- 本文结束 </span>
+      <i class="fa fa-paw"></i>
+      <span> 感谢阅读 -----------------------</span>
+    </div>
+  
+</div>
+     </div>
+   
+      
+  <div class="popular-posts-header">相关文章</div>
+  <ul class="popular-posts">
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\25\IntellijPluginHadoop\001-IntellijPluginHadoop\" rel="bookmark">Intellij  Plugin for Hadoop 项目简介</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\30\IntellijPluginHadoop\005-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现3</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\08\02\IntellijPluginHadoop\008-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----文件系统配置设计和实现1</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\26\IntellijPluginHadoop\002-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin插件整体设计和实现思路</a></div>
+    </li>
+    <li class="popular-posts-item">
+      <div class="popular-posts-title"><a href="\2017\07\31\IntellijPluginHadoop\006-IntellijPluginHadoop\" rel="bookmark">Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统连接Connection设计和实现</a></div>
+    </li>
+  </ul>
+
+        <div class="reward-container">
+  <div>坚持原创技术分享，您的支持将鼓励我继续创作！</div>
+  <button disable="enable" onclick="var qr = document.getElementById(&quot;qr&quot;); qr.style.display = (qr.style.display === 'none') ? 'block' : 'none';">
+    打赏
+  </button>
+  <div id="qr" style="display: none;">
+      
+      <div style="display: inline-block;">
+        <img src="/images/wechatpay.jpg" alt="扫地老僧 微信支付">
+        <p>微信支付</p>
+      </div>
+      
+      <div style="display: inline-block;">
+        <img src="/images/alipay.jpg" alt="扫地老僧 支付宝">
+        <p>支付宝</p>
+      </div>
+
+  </div>
+</div>
+
+        <!-- JS库 clipboard 拷贝内容到粘贴板-->
+<script src="https://cdn.bootcss.com/clipboard.js/2.0.1/clipboard.min.js"></script>
+
+<!-- JS库 sweetalert 显示提示信息-->
+<script src="https://unpkg.com/sweetalert/dist/sweetalert.min.js"></script>
+
+<ul class="post-copyright">
+  <!-- 本文标题 -->
+  <li>
+    <strong>本文标题： </strong>
+    Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现2
+  </li>
+
+  <!-- 本文作者 -->
+  <li class="post-copyright-author">
+    <strong>本文作者： </strong>
+    扫地老僧
+  </li>
+
+  <!-- 创建时间 -->
+  <li>
+    <strong>创建时间： </strong>
+    2017年07月29日 - 16时07分
+  </li>
+
+  <!-- 修改时间 -->
+  <li>
+    <strong>修改时间： </strong>
+    2019年12月11日 - 16时12分
+  </li>
+
+  <!-- 引用链接 -->
+  <li class="post-copyright-link">
+    <strong>本文链接：</strong>
+    <a href="https://fangyuzhong2016.github.io/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/" title="Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现2"
+      >https://fangyuzhong2016.github.io/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/</a
+    >
+    <span class="copy-path" title="点击复制引用链接"
+      ><i
+        style="cursor: pointer"
+        class="fa fa-clipboard"
+        data-clipboard-text="[扫地老僧's Blog | Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现2](https://fangyuzhong2016.github.io/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/)"
+        aria-label="post.copy_success"
+      ></i
+    ></span>
+  </li>
+
+  <!-- 版权声明 -->
+  <li class="post-copyright-license">
+    <strong
+      >版权声明：
+    </strong>
+    本博客所有文章除特别声明外，均采用 <a href="https://creativecommons.org/licenses/by-nc-sa/4.0/" rel="external nofollow" target="_blank">CC BY-NC-SA 4.0</a> 许可协议。转载请注明出处！
+  </li>
+</ul>
+
+<script>
+  var clipboard = new ClipboardJS(".fa-clipboard");
+  clipboard.on("success", function(target) {
+    var message = document.createElement("div");
+    message.innerHTML =
+      '<i class="fa fa-check-circle message-icon"></i><span class="message-content">' +
+      target.trigger.getAttribute("aria-label") +
+      "</span>";
+    swal({
+      content: message,
+      className: "copy-success-message",
+      timer: 1000,
+      button: false
+    });
+  });
+</script>
+
+      <footer class="post-footer">
+          <div class="post-tags">
+              <a href="/tags/Intellij-Plugin/" rel="tag"><i class="fa fa-tags"></i> Intellij Plugin</a>
+              <a href="/tags/Hadoop/" rel="tag"><i class="fa fa-tags"></i> Hadoop</a>
+              <a href="/tags/IDEA/" rel="tag"><i class="fa fa-tags"></i> IDEA</a>
+          </div>
+
+        
+  <div class="post-widgets">
+    <div class="wp_rating">
+      <div id="wpac-rating"></div>
+    </div>
+  </div>
+
+
+        
+    <div class="post-nav">
+      <div class="post-nav-item">
+    <a href="/2017/07/28/IntellijPluginHadoop/003-IntellijPluginHadoop/" rel="prev" title="Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现1">
+      <i class="fa fa-chevron-left"></i> Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现1
+    </a></div>
+      <div class="post-nav-item">
+    <a href="/2017/07/30/IntellijPluginHadoop/005-IntellijPluginHadoop/" rel="next" title="Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现3">
+      Hadoop-Intellij-Plugin 插件设计和源码分析----HDFS文件系统浏览器设计和实现3 <i class="fa fa-chevron-right"></i>
+    </a></div>
+    </div>
+      </footer>
+    
+  </article>
+  
+  
+  
+
+  </div>
+
+
+          </div>
+          
+
+<script>
+  window.addEventListener('tabs:register', () => {
+    let activeClass = CONFIG.comments.activeClass;
+    if (CONFIG.comments.storage) {
+      activeClass = localStorage.getItem('comments_active') || activeClass;
+    }
+    if (activeClass) {
+      let activeTab = document.querySelector(`a[href="#comment-${activeClass}"]`);
+      if (activeTab) {
+        activeTab.click();
+      }
+    }
+  });
+  if (CONFIG.comments.storage) {
+    window.addEventListener('tabs:click', event => {
+      if (!event.target.matches('.tabs-comment .tab-content .tab-pane')) return;
+      let commentClass = event.target.classList[1];
+      localStorage.setItem('comments_active', commentClass);
+    });
+  }
+</script>
+
+        </div>
+          
+  
+  <div class="toggle sidebar-toggle">
+    <span class="toggle-line toggle-line-first"></span>
+    <span class="toggle-line toggle-line-middle"></span>
+    <span class="toggle-line toggle-line-last"></span>
+  </div>
+
+  <aside class="sidebar">
+    <div class="sidebar-inner">
+
+      <ul class="sidebar-nav motion-element">
+        <li class="sidebar-nav-toc">
+          文章目录
+        </li>
+        <li class="sidebar-nav-overview">
+          站点概览
+        </li>
+      </ul>
+
+      <!--noindex-->
+      <div class="post-toc-wrap sidebar-panel">
+          <div class="post-toc motion-element"><ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#文件系统树FileSystemBrowserTree及其渲染类FileSystemBrowserTreeCellRenderer"><span class="nav-number">1.</span> <span class="nav-text">文件系统树FileSystemBrowserTree及其渲染类FileSystemBrowserTreeCellRenderer</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#FileSystemBrowserTree的初始化方法"><span class="nav-number">1.1.</span> <span class="nav-text">FileSystemBrowserTree的初始化方法</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TreeNode的右键菜单设计"><span class="nav-number">1.2.</span> <span class="nav-text">TreeNode的右键菜单设计</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#TreeNode的渲染器类-FileSystemBrowserTreeCellRenderer"><span class="nav-number">1.3.</span> <span class="nav-text">TreeNode的渲染器类 FileSystemBrowserTreeCellRenderer</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#文件系统主窗体设计"><span class="nav-number">2.</span> <span class="nav-text">文件系统主窗体设计</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm"><span class="nav-number">2.1.</span> <span class="nav-text">展现Tree的UI窗体TabbedBrowserForm和SimpleBrowserForm</span></a><ol class="nav-child"><li class="nav-item nav-level-4"><a class="nav-link" href="#SimpleBrowserForm类"><span class="nav-number">2.1.1.</span> <span class="nav-text">SimpleBrowserForm类</span></a></li><li class="nav-item nav-level-4"><a class="nav-link" href="#TabbedBrowserForm类"><span class="nav-number">2.1.2.</span> <span class="nav-text">TabbedBrowserForm类</span></a><ol class="nav-child"><li class="nav-item nav-level-5"><a class="nav-link" href="#该类的初始化。"><span class="nav-number">2.1.2.1.</span> <span class="nav-text">该类的初始化。</span></a></li><li class="nav-item nav-level-5"><a class="nav-link" href="#重写基类的抽象方法"><span class="nav-number">2.1.2.2.</span> <span class="nav-text">重写基类的抽象方法</span></a></li></ol></li></ol></li><li class="nav-item nav-level-3"><a class="nav-link" href="#主窗体UI，BrowserToolWindowForm。"><span class="nav-number">2.2.</span> <span class="nav-text">主窗体UI，BrowserToolWindowForm。</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文件属性对象展示窗体ObjectPropertiesForm"><span class="nav-number">2.3.</span> <span class="nav-text">文件属性对象展示窗体ObjectPropertiesForm</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#文件系统界面上的工具栏Action。"><span class="nav-number">2.4.</span> <span class="nav-text">文件系统界面上的工具栏Action。</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#总结"><span class="nav-number">3.</span> <span class="nav-text">总结</span></a></li></ol></div>
+      </div>
+      <!--/noindex-->
+
+      <div class="site-overview-wrap sidebar-panel">
+        <div class="site-author motion-element" itemprop="author" itemscope itemtype="http://schema.org/Person">
+    <img class="site-author-image" itemprop="image" alt="扫地老僧"
+      src="/images/avatar.png">
+  <p class="site-author-name" itemprop="name">扫地老僧</p>
+  <div class="site-description" itemprop="description">内不随念转，外不为境迁</div>
+</div>
+<div class="site-state-wrap motion-element">
+  <nav class="site-state">
+      <div class="site-state-item site-state-posts">
+          <a href="/archives/">
+        
+          <span class="site-state-item-count">12</span>
+          <span class="site-state-item-name">日志</span>
+        </a>
+      </div>
+      <div class="site-state-item site-state-categories">
+            <a href="/categories/">
+          
+        <span class="site-state-item-count">3</span>
+        <span class="site-state-item-name">分类</span></a>
+      </div>
+      <div class="site-state-item site-state-tags">
+            <a href="/tags/">
+          
+        <span class="site-state-item-count">6</span>
+        <span class="site-state-item-name">标签</span></a>
+      </div>
+  </nav>
+</div>
+  <div class="links-of-author motion-element">
+      <span class="links-of-author-item">
+        <a href="https://github.com/fangyuzhong2016" title="GitHub → https:&#x2F;&#x2F;github.com&#x2F;fangyuzhong2016" rel="noopener" target="_blank"><i class="fa fa-fw fa-github"></i>GitHub</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="mailto:906328924@qq.com" title="E-Mail → mailto:906328924@qq.com" rel="noopener" target="_blank"><i class="fa fa-fw fa-envelope"></i>E-Mail</a>
+      </span>
+      <span class="links-of-author-item">
+        <a href="http://weibo.com/fangyuzhong" title="Weibo → http:&#x2F;&#x2F;weibo.com&#x2F;fangyuzhong" rel="noopener" target="_blank"><i class="fa fa-fw fa-weibo"></i>Weibo</a>
+      </span>
+  </div>
+
+
+
+      </div>
+
+
+
+    </div>
+  </aside>
+  <div id="sidebar-dimmer"></div>
+
+
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer-inner">
+        <script
+  async
+  src="https://dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js"
+></script>
+
+<div class="copyright">
+  
+  &copy; 2017 – 
+  <span itemprop="copyrightYear">2019</span>
+  <span class="with-love">
+    <i class="fa fa-user"></i>
+  </span>
+  <span class="author" itemprop="copyrightHolder">扫地老僧</span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item-icon">
+      <i class="fa fa-area-chart"></i>
+    </span>
+    <span title="站点总字数">97k</span>
+</div>
+
+        
+<div class="busuanzi-count">
+  <script async src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+    <span class="post-meta-item" id="busuanzi_container_site_uv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-user"></i>
+      </span>
+      <span class="site-uv" title="总访客量">
+        <span id="busuanzi_value_site_uv"></span>
+      </span>
+    </span>
+    <span class="post-meta-divider">|</span>
+    <span class="post-meta-item" id="busuanzi_container_site_pv" style="display: none;">
+      <span class="post-meta-item-icon">
+        <i class="fa fa-eye"></i>
+      </span>
+      <span class="site-pv" title="总访问量">
+        <span id="busuanzi_value_site_pv"></span>
+      </span>
+    </span>
+</div>
+
+
+
+
+
+
+
+
+      </div>
+    </footer>
+  </div>
+
+  
+  
+  <script color='0,0,255' opacity='0.5' zIndex='-1' count='99' src="/lib/canvas-nest/canvas-nest.min.js"></script>
+  <script src="/lib/anime.min.js"></script>
+  <script src="https://code.jquery.com/jquery-2.1.3.min.js"></script>
+  <script src="//cdn.jsdelivr.net/gh/fancyapps/fancybox@3/dist/jquery.fancybox.min.js"></script>
+  <script src="/lib/velocity/velocity.min.js"></script>
+  <script src="/lib/velocity/velocity.ui.min.js"></script>
+
+<script src="/js/utils.js"></script>
+
+<script src="/js/motion.js"></script>
+
+
+<script src="/js/schemes/muse.js"></script>
+
+
+<script src="/js/next-boot.js"></script>
+
+<script src="/js/bookmark.js"></script>
+
+
+
+
+  
+
+
+
+  <script>
+  if (CONFIG.page.isPost) {
+    wpac_init = window.wpac_init || [];
+    wpac_init.push({
+      widget: 'Rating',
+      id: 22280,
+      el: 'wpac-rating',
+      color: 'fc6423'
+    });
+    (function() {
+      if ('WIDGETPACK_LOADED' in window) return;
+      WIDGETPACK_LOADED = true;
+      var mc = document.createElement('script');
+      mc.type = 'text/javascript';
+      mc.async = true;
+      mc.src = '//embed.widgetpack.com/widget.js';
+      var s = document.getElementsByTagName('script')[0]; s.parentNode.insertBefore(mc, s.nextSibling);
+    })();
+  }
+  </script>
+
+  
+<script src="/js/local-search.js"></script>
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
+
+  
+
+  
+
+  <script src="/js/wobblewindow.js"></script>
+  <script>
+    //只在桌面版网页启用特效
+    if( window.innerWidth > 768  ){
+      $(document).ready(function () {
+        
+          $('#header').wobbleWindow({
+            radius: 50,
+            movementTop: false,
+            movementLeft: false,
+            movementRight: false,
+            debug: true,
+          });
+        
+
+        
+
+        
+      });
+    }
+  </script>
+
+
+
+
+  <script async src="/js/cursor/fireworks.js"></script>
+
+
+
+
+  <script src="/js/activate-power-mode.min.js"></script>
+  <script>
+    POWERMODE.colorful = true;
+    POWERMODE.shake = false;
+    document.body.addEventListener('input', POWERMODE);
+  </script>
+
+
+
+ 
+<script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment-precise-range-plugin@1.3.0/moment-precise-range.min.js"></script>
+<script>
+  function timer() {
+    var ages = moment.preciseDiff(moment(),moment(20170501,"YYYYMMDD"));
+    ages = ages.replace(/years?/, "年");
+    ages = ages.replace(/months?/, "月");
+    ages = ages.replace(/days?/, "天");
+    ages = ages.replace(/hours?/, "小时");
+    ages = ages.replace(/minutes?/, "分");
+    ages = ages.replace(/seconds?/, "秒");
+    ages = ages.replace(/\d+/g, '<span style="color:#1890ff">$&</span>');
+    div.innerHTML = `我已在此等候你 ${ages}`;
+  }
+  var div = document.createElement("div");
+  //插入到copyright之后
+  var copyright = document.querySelector(".copyright");
+  document.querySelector(".footer-inner").insertBefore(div, copyright.nextSibling);
+  timer();
+  setInterval("timer()",1000)
+</script>
+
+</body>
+</html>
