@@ -1,0 +1,614 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/globe.ico">
+  <link rel="icon" href="/img/globe.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="本节，简单介绍HDFS文件系统浏览器的文件系统对象。文件系统对象和HDFS文件系统对象一致，分为目录和文件，文件不再进行具体的区分文件类型。文件系统对象在UI上表现为文件系统树上的节点.">
+  <meta name="author" content="fyz">
+  <meta name="keywords" content="">
+  
+  <title>HadoopIntellijPlugin插件HDFS文件系统对象的设计与实现 | 扫地老僧</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.6.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":true},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"e050beeb708f14713adb2b820c6c5ee3","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 40vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>扫地老僧 - 专注GIS、大数据和AI人工智能领域</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/personalworks/">
+                <i class="iconfont icon-map"></i>
+                个人作品
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/banner_img.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="HadoopIntellijPlugin插件HDFS文件系统对象的设计与实现">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      fyz
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2017-08-01 16:17" pubdate>
+        2017年8月1日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      30
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">HadoopIntellijPlugin插件HDFS文件系统对象的设计与实现</h1>
+            
+            <div class="markdown-body">
+              <p>&emsp;&emsp;本节，简单介绍HDFS文件系统浏览器的文件系统对象。文件系统对象和HDFS文件系统对象一致，分为目录和文件，文件不再进行具体的区分文件类型。文件系统对象在UI上表现为文件系统树上的节点。FileSystemObject整个设计的类图如下：<br><img src="1.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="文件系统对象的接口定义-FileSystemObject"><a href="#文件系统对象的接口定义-FileSystemObject" class="headerlink" title="文件系统对象的接口定义 FileSystemObject"></a>文件系统对象的接口定义 FileSystemObject</h2><p>&emsp;&emsp;文件系统对象在UI上表现为树节点，因此该接口需要继承自定义的树节点接口FileSystemBrowserTreeNode接口。FileSystemObject接口定义了文件系统对象的相关属性和方法，包括显示的名称、图标、对象类型（目录还是文件）、关联的连接处理对象、父对象等等。直接贴代码了：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义文件系统对象接口</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-15.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span>  <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">FileSystemObject</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FileSystemBrowserTreeNode</span>,<span class="hljs-title">DynamicContentElement</span>,</span><br><span class="hljs-class">        <span class="hljs-title">Referenceable</span>, <span class="hljs-title">PresentableConnectionProvider</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象类型</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystemObjectType <span class="hljs-title">getObjectType</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的名称</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function">String <span class="hljs-title">getName</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 文件系统对象是否加载过</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">getOverload</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的类型名称</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">String <span class="hljs-title">getTypeName</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的图标</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function">Icon <span class="hljs-title">getIcon</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的连接处理对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function">ConnectionHandler <span class="hljs-title">getConnectionHandler</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的父对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystemObject <span class="hljs-title">getParentObject</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的集合</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function">FileSystemObjectBundle <span class="hljs-title">getObjectBundle</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">     * 获取导航默认对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * @return</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function">FileSystemObject <span class="hljs-title">getDefaultNavigationObject</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取未能进行释放的文件系统对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function">FileSystemObject <span class="hljs-title">getUndisposedElement</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的属性</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystemObjectProperties <span class="hljs-title">getProperties</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象可呈现的属性集合</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">List&lt;PresentableProperty&gt; <span class="hljs-title">getPresentableProperties</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的引用</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystemObjectRef <span class="hljs-title">getRef</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 对象是否已验证</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isValid</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统对象的父对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function">FileSystemBrowserTreeNode <span class="hljs-title">getParent</span><span class="hljs-params">()</span></span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h2 id="HDFS根目录对象FileSystemObjectBundle接口定义"><a href="#HDFS根目录对象FileSystemObjectBundle接口定义" class="headerlink" title="HDFS根目录对象FileSystemObjectBundle接口定义"></a>HDFS根目录对象FileSystemObjectBundle接口定义</h2><p>&emsp;&emsp;我们把HDFS根目录”/“ 下的对象（目录也好文件也好）单独拿出来，定义成FileSystemObjectBundle，这样设计是为后面读取HDFS对象方便绑定到UI上进行显示，他也是TreeNode，因此也继承了FileSystemBrowserTreeNode，他只是个标志，并拥有 获取根节点对象的数据连接处理对象。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义文件系统对象的集合，这里特指HDFS中的根目录对象&quot;/&quot;</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-15.</span><br><span class="hljs-comment"> */</span><br> <span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">FileSystemObjectBundle</span></span><br><span class="hljs-class">        <span class="hljs-keyword">extends</span> <span class="hljs-title">FileSystemBrowserTreeNode</span>, <span class="hljs-title">Disposable</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统连接对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionHandler <span class="hljs-title">getConnectionHandler</span><span class="hljs-params">()</span></span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h2 id="文件系统对象的抽象实现-FileSystemObjectImpl"><a href="#文件系统对象的抽象实现-FileSystemObjectImpl" class="headerlink" title="文件系统对象的抽象实现 FileSystemObjectImpl"></a>文件系统对象的抽象实现 FileSystemObjectImpl</h2><h3 id="抽象实现类中，有两个构造函数："><a href="#抽象实现类中，有两个构造函数：" class="headerlink" title="抽象实现类中，有两个构造函数："></a>抽象实现类中，有两个构造函数：</h3><p>1、该构造函数以文件系统对象的父对象、HDFS的FIleStatus和对象的名称为参数</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化文件系统对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> parentObject 父对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> HDFSFileStatus HDFS的文件状态对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> name 对象的名称</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">FileSystemObjectImpl</span><span class="hljs-params">(FileSystemObject parentObject,</span></span><br><span class="hljs-function"><span class="hljs-params">                               org.apache.hadoop.fs.FileStatus HDFSFileStatus, String name)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">this</span>.connectionHandlerRef = ConnectionHandlerRef.from(parentObject.getConnectionHandler());<br>    <span class="hljs-keyword">this</span>.parentObjectRef = FileSystemObjectRef.from(parentObject);<br>    <span class="hljs-keyword">this</span>.name = name;<br>    init(HDFSFileStatus,<span class="hljs-keyword">null</span>);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>2、该构造函数以文件系统对象连接处理对象、HDFS的FIleStatus和对象的名称为参数，当读取HDFS的根目录“/”对象的时候，调用该构造函数，除此之外，调用构造函数1</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化文件系统对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> connectionHandler 文件对象的连接处理类</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> HDFSFileStatus  HDFS的文件状态对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> name 对象的名称</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">FileSystemObjectImpl</span><span class="hljs-params">(ConnectionHandler connectionHandler,</span></span><br><span class="hljs-function"><span class="hljs-params">                               org.apache.hadoop.fs.FileStatus HDFSFileStatus, String name)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">this</span>.connectionHandlerRef = ConnectionHandlerRef.from(connectionHandler);<br>    <span class="hljs-keyword">this</span>.name = name;<br>    init(HDFSFileStatus,connectionHandler);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>方法 init(org.apache.hadoop.fs.FileStatus HDFSFileStatus,ConnectionHandler connectionHandler)，构建对象的引用，并且读取对象的相关信息，目录或文件的创建者、文件目录大小、文件目录路径等等。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化，获取HDFS系统的对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> HDFSFileStatus</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> connectionHandler</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">init</span><span class="hljs-params">(org.apache.hadoop.fs.FileStatus HDFSFileStatus,ConnectionHandler connectionHandler)</span></span><br><span class="hljs-function"></span>&#123;<br>    FileSystemObjectType fileSystemObjectType = HDFSFileStatus.isDirectory()? FileSystemObjectType.DIRECTORY: FileSystemObjectType.FILE;<br>    <span class="hljs-keyword">this</span>.objectRef = <span class="hljs-keyword">new</span> FileSystemObjectRef(<span class="hljs-keyword">this</span>, fileSystemObjectType,connectionHandler);<br>    fileSystemInform = HDFSUtil.getFileSystemInformation(HDFSFileStatus);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="内部构建子对象"><a href="#内部构建子对象" class="headerlink" title="内部构建子对象"></a>内部构建子对象</h3><p>&emsp;&emsp;获取该对象的全部子对象，使用多线程的方式，获取其子对象，调用抽象方法（该抽象方法在具体的对象实现类中去重写） ：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> List&lt;FileSystemBrowserTreeNode&gt; <span class="hljs-title">buildAllPossibleTreeChildren</span><span class="hljs-params">()</span></span>;<br><span class="hljs-keyword">public</span> List&lt;? extends FileSystemBrowserTreeNode&gt; getChildren()<br>&#123;<br>    <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.visibleTreeChildren == <span class="hljs-keyword">null</span>)<br>    &#123;<br>        <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>)<br>        &#123;<br>            <span class="hljs-keyword">if</span> (<span class="hljs-keyword">this</span>.visibleTreeChildren == <span class="hljs-keyword">null</span>)<br>            &#123;<br>                <span class="hljs-keyword">this</span>.visibleTreeChildren = <span class="hljs-keyword">new</span> ArrayList();<br>                <span class="hljs-keyword">this</span>.visibleTreeChildren.add(<span class="hljs-keyword">new</span> LoadInProgressTreeNode(<span class="hljs-keyword">this</span>));<br>                ConnectionHandler connectionHandler = getConnectionHandler();<br>                String connectionString = connectionHandler == <span class="hljs-keyword">null</span> ? <span class="hljs-string">&quot;&quot;</span> : <span class="hljs-string">&quot; (&quot;</span> + connectionHandler.getName() + <span class="hljs-string">&quot;)&quot;</span>;<br>                <span class="hljs-keyword">new</span> BackgroundTask(getProject(), <span class="hljs-string">&quot;Loading data &quot;</span> + connectionString, <span class="hljs-keyword">true</span>)<br>                &#123;<br>                    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">execute</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> ProgressIndicator progressIndicator)</span></span><br><span class="hljs-function">                    </span>&#123;<br>                        buildTreeChildren(<span class="hljs-keyword">false</span>);<br>                    &#125;<br>                &#125;.start();<br>            &#125;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">this</span>.visibleTreeChildren;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>&emsp;&emsp;内部构建子对象：首先获取全部可能的对象，然后遍历对象，进行对象的初始化，判断是否是加载数据节点，是的话，删除该节点，并设置该对象的子对象加载完毕标志，最后，触发通知，TreeNode已经修改，需要重新加载该对象。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">buildTreeChildren</span><span class="hljs-params">(<span class="hljs-keyword">boolean</span> isreBuild)</span></span><br><span class="hljs-function"></span>&#123;<br>    FailsafeUtil.check(<span class="hljs-keyword">this</span>);<br>    List&lt;FileSystemBrowserTreeNode&gt; allPossibleTreeChildren = getAllPossibleTreeChildren(isreBuild);<br>    List&lt;FileSystemBrowserTreeNode&gt; newTreeChildren = allPossibleTreeChildren;<br>    <span class="hljs-keyword">if</span> (allPossibleTreeChildren.size() &gt; <span class="hljs-number">0</span>)<br>    &#123;<br>        newTreeChildren = <span class="hljs-keyword">new</span> ArrayList(newTreeChildren);<br>        <span class="hljs-keyword">for</span> (FileSystemBrowserTreeNode treeNode : newTreeChildren)<br>        &#123;<br>            FileSystemObject objectList = (FileSystemObject) treeNode;<br>            objectList.initTreeElement();<br>            FailsafeUtil.check(<span class="hljs-keyword">this</span>);<br>        &#125;<br>        <span class="hljs-keyword">if</span> ((<span class="hljs-keyword">this</span>.visibleTreeChildren.size() == <span class="hljs-number">1</span>) &amp;&amp; ((<span class="hljs-keyword">this</span>.visibleTreeChildren.get(<span class="hljs-number">0</span>) <span class="hljs-keyword">instanceof</span> LoadInProgressTreeNode)))<br>        &#123;<br>            <span class="hljs-keyword">this</span>.visibleTreeChildren.get(<span class="hljs-number">0</span>).dispose();<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">this</span>.visibleTreeChildren = newTreeChildren;<br>    <span class="hljs-keyword">this</span>.treeChildrenLoaded = <span class="hljs-keyword">true</span>;<br>    <span class="hljs-comment">//通知TreeNode修改，需要重新加载</span><br>    Project project = FailsafeUtil.get(getProject());<br>    ( EventUtil.notify(project, BrowserTreeEventListener.TOPIC)).nodeChanged(<span class="hljs-keyword">this</span>, TreeEventType.STRUCTURE_CHANGED);<br>    FileSystemBrowserManager.scrollToSelectedElement(getConnectionHandler());<br>&#125;<br><br></code></pre></div></td></tr></table></figure>
+
+<h2 id="HDFS的目录和文件对象的实现-HadoopDirectoryObject-、HadoopFileObject"><a href="#HDFS的目录和文件对象的实现-HadoopDirectoryObject-、HadoopFileObject" class="headerlink" title="HDFS的目录和文件对象的实现 HadoopDirectoryObject 、HadoopFileObject"></a>HDFS的目录和文件对象的实现 HadoopDirectoryObject 、HadoopFileObject</h2><h3 id="HDFS目录对象的实现HadoopDirectoryObject。"><a href="#HDFS目录对象的实现HadoopDirectoryObject。" class="headerlink" title="HDFS目录对象的实现HadoopDirectoryObject。"></a>HDFS目录对象的实现HadoopDirectoryObject。</h3><p>&emsp;&emsp;继承抽象类FileSystemObjectImpl和，重写对象类型、HDFS目录所在的路径、获取目录对象的子对象。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义HDFS目录对象</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-17.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HadoopDirectoryObject</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FileSystemObjectImpl</span></span><br><span class="hljs-class"></span>&#123;<br>   <span class="hljs-keyword">private</span> List&lt;FileSystemBrowserTreeNode&gt; fileSystemBrowserTreeNodeLists =<span class="hljs-keyword">null</span>;<br>   <span class="hljs-keyword">private</span> org.apache.hadoop.fs.FileStatus fileStatus=<span class="hljs-keyword">null</span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化 HDFS目录对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> parentObject 父对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> resultSet HDFS的FileStatus</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> name 对象的名称</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">HadoopDirectoryObject</span><span class="hljs-params">(FileSystemObject parentObject,</span></span><br><span class="hljs-function"><span class="hljs-params">                                 org.apache.hadoop.fs.FileStatus resultSet, String name)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>(parentObject,resultSet,name);<br>        fileStatus = resultSet;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化HDFS目录对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> connectionHandler 对象的连接</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> resultSet HDFS的FileStatus</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> name 对象的名称</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">HadoopDirectoryObject</span><span class="hljs-params">(ConnectionHandler connectionHandler,</span></span><br><span class="hljs-function"><span class="hljs-params">                                 org.apache.hadoop.fs.FileStatus resultSet, String name)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>(connectionHandler,resultSet,name);<br>        fileStatus = resultSet;<br>        fileSystemBrowserTreeNodeLists = <span class="hljs-keyword">new</span> ArrayList();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取对象的类型 这里是目录</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>   <span class="hljs-function"><span class="hljs-keyword">public</span> FileSystemObjectType <span class="hljs-title">getObjectType</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> FileSystemObjectType.DIRECTORY;<br>    &#125;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取目录对象的HDFS路径</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getLocationString</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> fileStatus.getPath().toString();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 重写，构建目录的下面的子对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>   <span class="hljs-function"><span class="hljs-keyword">public</span> List&lt;FileSystemBrowserTreeNode&gt; <span class="hljs-title">buildAllPossibleTreeChildren</span><span class="hljs-params">()</span></span><br><span class="hljs-function">   </span>&#123;<br>      ConnectionHandler connectionHandler = getConnectionHandler();<br>      FileSystem fileSystem = connectionHandler.getMainFileSystem();<br>       <span class="hljs-keyword">try</span><br>       &#123;<br>           String path = fileStatus.getPath().toString();<br>           FileStatus[] fileStatuses = fileSystem.listStatus(<span class="hljs-keyword">new</span> Path(fileStatus.getPath().toString()));<br>           FileSystemBrowserTreeNode[] fileSystemBrowserTreeNodes = <span class="hljs-keyword">new</span> FileSystemBrowserTreeNode[fileStatuses.length];<br>           <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; fileStatuses.length; i++)<br>           &#123;<br>               FileStatus f = fileStatuses[i];<br>               <span class="hljs-keyword">if</span> (f.isDirectory())<br>               &#123;<br>                   FileSystemObject dirdbObject = <span class="hljs-keyword">new</span> HadoopDirectoryObject(<span class="hljs-keyword">this</span>, f,f.getPath().getName());<br>                   fileSystemBrowserTreeNodes[i] = dirdbObject;<br>               &#125; <span class="hljs-keyword">else</span><br>               &#123;<br>                   FileSystemObject filedbObject = <span class="hljs-keyword">new</span> HadoopFileObject(<span class="hljs-keyword">this</span>, f,f.getPath().getName());<br>                   fileSystemBrowserTreeNodes[i] = filedbObject;<br>               &#125;<br>           &#125;<br>           fileSystemBrowserTreeNodeLists = FileSystemBrowserUtils.createList(fileSystemBrowserTreeNodes);<br>       &#125;<br>       <span class="hljs-keyword">catch</span> (Exception ex)<br>       &#123;<br><br>       &#125;<br>       <span class="hljs-keyword">return</span> fileSystemBrowserTreeNodeLists;<br>   &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h3 id="HDFS的文件对象的实现HadoopFileObject。"><a href="#HDFS的文件对象的实现HadoopFileObject。" class="headerlink" title="HDFS的文件对象的实现HadoopFileObject。"></a>HDFS的文件对象的实现HadoopFileObject。</h3><p>&emsp;&emsp;和目录实现一样，唯一区别是 对象类型是文件类型并且文件是没有子对象的，但也要重写：<br>public List<FileSystemBrowserTreeNode> buildAllPossibleTreeChildren()<br>并且不能返回NULL。 代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义HDFS文件对象</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-17.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">HadoopFileObject</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">FileSystemObjectImpl</span></span><br><span class="hljs-class"></span>&#123;<br>   <span class="hljs-keyword">private</span> List&lt;FileSystemBrowserTreeNode&gt; fileSystemBrowserTreeNodes =<span class="hljs-keyword">null</span>;<br>   <span class="hljs-keyword">private</span> FileStatus fileStatus;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化HDFS文件对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> parentObject 父对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> resultSet HDFS的FIleStatus</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> name 文件名称</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">HadoopFileObject</span><span class="hljs-params">(FileSystemObject parentObject,</span></span><br><span class="hljs-function"><span class="hljs-params">                            org.apache.hadoop.fs.FileStatus resultSet, String name)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>(parentObject, resultSet,name);<br>        fileSystemBrowserTreeNodes = <span class="hljs-keyword">new</span> ArrayList();<br>        fileStatus = resultSet;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化HDFS的文件对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> connectionHandler 连接处理对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> resultSet HDFS的FIleStatus</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> name 文件名称</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">HadoopFileObject</span><span class="hljs-params">(ConnectionHandler connectionHandler,</span></span><br><span class="hljs-function"><span class="hljs-params">                            org.apache.hadoop.fs.FileStatus resultSet, String name)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>(connectionHandler, resultSet,name);<br>        fileSystemBrowserTreeNodes = <span class="hljs-keyword">new</span> ArrayList();<br>        fileStatus = resultSet;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取HDFS文件所在的路径</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getLocationString</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> fileStatus.getPath().toString();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取对象类型，这里是文件</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> FileSystemObjectType <span class="hljs-title">getObjectType</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> FileSystemObjectType.FILE;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 文件没有子对象，但不能给NULL</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> List&lt;FileSystemBrowserTreeNode&gt; <span class="hljs-title">buildAllPossibleTreeChildren</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> fileSystemBrowserTreeNodes;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h2 id="HDFS的根目录对象的实现FileSystemObjectBundleImpl。"><a href="#HDFS的根目录对象的实现FileSystemObjectBundleImpl。" class="headerlink" title="HDFS的根目录对象的实现FileSystemObjectBundleImpl。"></a>HDFS的根目录对象的实现FileSystemObjectBundleImpl。</h2><p>&emsp;&emsp;该类继承树节点的抽象类FileSystemBrowserTreeNodeBase和FileSystemObjectBundle接口。该类，重点关注，怎么读取HDFS的根目录“/”对象，获取其数据进行绑定的。该类只有一个构造函数，在构造函数中通过 loadData()开始HDFS根目录的数据加载。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> connectionHandler 连接处理接口</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> treeParent 父节点</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">FileSystemObjectBundleImpl</span><span class="hljs-params">(ConnectionHandler connectionHandler, FileSystemBrowserTreeNode treeParent)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">this</span>.connectionHandler = connectionHandler;<br>    <span class="hljs-keyword">this</span>.treeParent = treeParent;<br>    loadData();<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 重新加载数据</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">loadData</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-comment">//获取根节点下的所有文件和目录 创建 节点</span><br>    fileSystem = connectionHandler.getMainFileSystem();<br>    <span class="hljs-keyword">if</span>(connectionHandler.getConnectionStatus().isConnected())<br>    &#123;<br>        <span class="hljs-keyword">try</span><br>        &#123;<br>            <span class="hljs-keyword">if</span>( <span class="hljs-keyword">this</span>.allPossibleTreeChildren!=<span class="hljs-keyword">null</span>)<br>            &#123;<br>                <span class="hljs-keyword">this</span>.allPossibleTreeChildren.clear();<br>            &#125;<br>            FileStatus[] fileStatuses = fileSystem.listStatus(<span class="hljs-keyword">new</span> Path(<span class="hljs-string">&quot;/&quot;</span>));<br>            FileSystemBrowserTreeNode[] fileSystemBrowserTreeNodes = <span class="hljs-keyword">new</span> FileSystemBrowserTreeNode[fileStatuses.length];<br>            <span class="hljs-keyword">for</span> (<span class="hljs-keyword">int</span> i = <span class="hljs-number">0</span>; i &lt; fileStatuses.length; i++)<br>            &#123;<br>                FileStatus f = fileStatuses[i];<br>                <span class="hljs-keyword">if</span> (f.isDirectory())<br>                &#123;<br>                    <span class="hljs-comment">//如果是目录，实例化目录对象</span><br>                    FileSystemObject dirdbObject = <span class="hljs-keyword">new</span> HadoopDirectoryObject(connectionHandler, f, f.getPath().getName());<br>                    fileSystemBrowserTreeNodes[i] = dirdbObject;<br>                &#125; <span class="hljs-keyword">else</span><br>                &#123;<br>                    <span class="hljs-comment">//如果是文件，实例化文件对象</span><br>                    FileSystemObject filedbObject = <span class="hljs-keyword">new</span> HadoopFileObject(connectionHandler, f, f.getPath().getName());<br>                    fileSystemBrowserTreeNodes[i] = filedbObject;<br>                &#125;<br>            &#125;<br>            <span class="hljs-keyword">this</span>.allPossibleTreeChildren = FileSystemBrowserUtils.createList(fileSystemBrowserTreeNodes);<br>        &#125;<br>        <span class="hljs-keyword">catch</span> (Exception ex)<br>        &#123;<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">else</span><br>    &#123;<br>        <span class="hljs-keyword">if</span>( <span class="hljs-keyword">this</span>.allPossibleTreeChildren!=<span class="hljs-keyword">null</span>)<br>        &#123;<br>            <span class="hljs-keyword">this</span>.allPossibleTreeChildren.clear();<br>        &#125;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Hadoop/">Hadoop</a>
+                    
+                      <a class="hover-with-bg" href="/tags/IDEA/">IDEA</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2017/08/02/IntellijPluginHadoop/008-IntellijPluginHadoop/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件文件系统配置设计和实现1</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2017/07/31/IntellijPluginHadoop/006-IntellijPluginHadoop/">
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件HDFS文件系统连接Connection设计和实现</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+            <hr>
+            
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+		   坚持技术分享，你的支持将鼓励我继续创作！
+        </span>
+		<input type="button" id="btn_donate" style="background-color: red; color: white; border: none; height=35; width=80" value="打赏"/>
+        <br>
+      </div>  
+	<div id="donate_guide" class="donate_bar center" style="display: none">
+		<!-- 支付宝打赏图案 -->
+		<img src="/img/zhifubao.JPG" srcset="/img/loading.gif" lazyload alt="支付宝打赏"> 
+		<!-- 微信打赏图案 -->
+		<img src="/img/wechatpay.jpg" srcset="/img/loading.gif" lazyload alt="微信打赏">  
+    </div>
+	<script type="text/javascript">
+		document.getElementById('btn_donate').onclick = function(){
+			var qr=document.getElementById("donate_guide");
+			"none"===qr.style.display?qr.style.display="block":qr.style.display="none"
+		}
+	</script>
+</div>
+            
+            
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js', function () {
+        var gitalk = new Gitalk({
+          clientID: 'c670ef2bb24287e88e04',
+          clientSecret: 'e48c715a6abaad0526c7a9e5213a85b23760a705',
+          repo: 'fangyuzhong2016.github.io',
+          owner: 'fangyuzhong2016',
+          admin: ["fangyuzhong2016"],
+          id: '758938df20436c3ad05d0cbed496dc5c',
+          language: 'zh-CN',
+          labels: ["Gitalk"],
+          perPage: 10,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false,
+          proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token'
+        });
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>博客使用Hexo搭建</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>博客风格模板Fluid</span></a> <div> <span id="timeDate">载入天数...</span> <span id="times">载入时分秒...</span> <script src="/js/duration.js"></script> </div> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?e050beeb708f14713adb2b820c6c5ee3";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

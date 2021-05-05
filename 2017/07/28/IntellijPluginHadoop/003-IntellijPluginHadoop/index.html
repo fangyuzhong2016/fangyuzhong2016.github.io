@@ -1,0 +1,600 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/globe.ico">
+  <link rel="icon" href="/img/globe.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="本节说明文件系统树节点的设计与实现。IntelliJ Plugin for  Hadoop 插件 在开发和设计上，很大程度上借鉴了  DB Navigator  插件的设计和实现。DB Navigator是一款基于IntelliJ IDEA数据库管理的优秀插件，该插件目前好像是开源的，地址在  https://plugins.jetbrains.com/plugin/1800-database-navigator  官方插件库，提供的源码不是最新的(源码无法编译)，但可以下载下来进行参考。">
+  <meta name="author" content="fyz">
+  <meta name="keywords" content="">
+  
+  <title>HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现1 | 扫地老僧</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.6.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":true},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"e050beeb708f14713adb2b820c6c5ee3","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 40vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>扫地老僧 - 专注GIS、大数据和AI人工智能领域</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/personalworks/">
+                <i class="iconfont icon-map"></i>
+                个人作品
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/banner_img.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现1">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      fyz
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2017-07-28 16:17" pubdate>
+        2017年7月28日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.5k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      33
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现1</h1>
+            
+            <div class="markdown-body">
+              <p>&emsp;&emsp;本节说明文件系统树节点的设计与实现。IntelliJ Plugin for  Hadoop 插件 在开发和设计上，很大程度上借鉴了DB Navigator插件的设计和实现。 DB Navigator  是一款基于 IntelliJ IDEA  数据库管理的优秀插件，该插件目前好像是开源的，地址在<a target="_blank" rel="noopener" href="https://plugins.jetbrains.com/plugin/1800-database-navigator">https://plugins.jetbrains.com/plugin/1800-database-navigator</a>  官方插件库，提供的源码不是最新的(源码无法编译)，但可以下载下来进行参考。<br>&emsp;&emsp;文件系统对象，在界面上使用树状结构进行展示，是最好的选择。可以使用 javax.swing.tree 控件进行展示。IDEA 本身也有一套扩展的Tree，也是继承了javax.swing.tree的控件，不过在界面主题上或者节点的事件处理上做了一次封装，因此我们树的主控件，将会继承IDEA的Tree。后续我们再讨论其具体的实现方式。本节我们来讨论一下 树控件节点Node的设计。那么这里涉及到 树节点Node的接口定义、节点模型类设计（Tree 控件使用 TreeModel 类操作相关节点）、节点Node的相关事件监听对象设计、加载数据等待的显示节点设计、树的展示方式设计等。 文件系统树节点的整体设计类图如下：<br><img src="1.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="树节点的FileSystemBrowserTreeNode接口定义和其抽象实现"><a href="#树节点的FileSystemBrowserTreeNode接口定义和其抽象实现" class="headerlink" title="树节点的FileSystemBrowserTreeNode接口定义和其抽象实现"></a>树节点的FileSystemBrowserTreeNode接口定义和其抽象实现</h2><p>&emsp;&emsp;FileSystemBrowserTreeNode 继承TreeNode 接口，主要功能包括初始化树的相关元素、获取节点的深度、节点是否可以展开、树节点是否已经加载、构建该节点的子节点、获取该节点的父节点、刷新节点、获取节点图标、获取节点文本(展示使用)等等。另外节点可以进行导航设置(跟踪节点浏览的位置)，因此需要继承 NavigationItem, ItemPresentation  接口实现导航功能。鼠标悬停，会进行节点内容的相关提示，因此还要继承 自定义 工具提示 接口 ToolTipProvider。代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义HDFS目录树节点接口&lt;p&gt;</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-15.</span><br><span class="hljs-comment"> */</span><br> <span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">FileSystemBrowserTreeNode</span></span><br><span class="hljs-class">        <span class="hljs-keyword">extends</span> <span class="hljs-title">TreeNode</span>, <span class="hljs-title">NavigationItem</span>, <span class="hljs-title">ItemPresentation</span>, <span class="hljs-title">ToolTipProvider</span>,<span class="hljs-title">GenericFileSystemElement</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化树的元素</span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">initTreeElement</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 是否展开</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">canExpand</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取树的深度</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">getTreeDepth</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 树结构是否加载</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isTreeStructureLoaded</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 或节点的子节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     List&lt;? extends FileSystemBrowserTreeNode&gt; getChildren();<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 刷新子节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">refreshTreeChildren</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 重构该节点的子节点</span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">rebuildTreeChildren</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取节点图标</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> paramInt</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">Icon <span class="hljs-title">getIcon</span><span class="hljs-params">(<span class="hljs-keyword">int</span> paramInt)</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *获取节点文本</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">String <span class="hljs-title">getPresentableText</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取节点文本详细信息</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">String <span class="hljs-title">getPresentableTextDetails</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">String <span class="hljs-title">getPresentableTextConditionalDetails</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取子节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> paramInt</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">FileSystemBrowserTreeNode <span class="hljs-title">getChildAt</span><span class="hljs-params">(<span class="hljs-keyword">int</span> paramInt)</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取父节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">FileSystemBrowserTreeNode <span class="hljs-title">getParent</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取节点所在的索引</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> paramBrowserTreeNode</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">getIndex</span><span class="hljs-params">(FileSystemBrowserTreeNode paramBrowserTreeNode)</span></span>;<br>&#125;<br></code></pre></div></td></tr></table></figure></p>
+<p>&emsp;&emsp;该接口，有个抽象的实现，在其抽象实现中，有个重要的方法 getLocationString(),该方法表示节点所在的路径字符串，在具体的节点实现类中需要重写该方法。抽象类 FileSystemBrowserTreeNodeBase 代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-15.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">FileSystemBrowserTreeNodeBase</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">DisposableBase</span></span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">FileSystemBrowserTreeNode</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前位置字符串</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getLocationString</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">null</span>;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取子对象枚举</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> Enumeration <span class="hljs-title">children</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> Collections.enumeration(getChildren());<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取子节点所在的索引</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> child</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> <span class="hljs-title">getIndex</span><span class="hljs-params">(TreeNode child)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> getIndex((FileSystemBrowserTreeNode) child);<br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">getAllowsChildren</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> !isLeaf();<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure></p>
+<h2 id="树节点Node的事件监听接口的设计和实现"><a href="#树节点Node的事件监听接口的设计和实现" class="headerlink" title="树节点Node的事件监听接口的设计和实现"></a>树节点Node的事件监听接口的设计和实现</h2><p>&emsp;&emsp;树节点Node 事件监听器BrowserTreeEventListener接口，定义了Node 改变、选中改变触发的相关方法，继承了 EventListener 接口。IDEA 框架本身定义了一套事件或者消息通知机制，因此借助IDEA来实现事件消息通知。代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-16.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span>  <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">BrowserTreeEventListener</span></span><br><span class="hljs-class">        <span class="hljs-keyword">extends</span> <span class="hljs-title">EventListener</span></span><br><span class="hljs-class"></span>&#123;<br>      <span class="hljs-comment">/**</span><br><span class="hljs-comment">       * 通知消息类型</span><br><span class="hljs-comment">       */</span><br>      <span class="hljs-keyword">final</span> Topic&lt;BrowserTreeEventListener&gt; TOPIC = Topic.create(<span class="hljs-string">&quot;Browser tree event&quot;</span>, BrowserTreeEventListener.class);<br><br>      <span class="hljs-comment">/**</span><br><span class="hljs-comment">       * 树节点Node改变事件触发的方法</span><br><span class="hljs-comment">       * <span class="hljs-doctag">@param</span> paramBrowserTreeNode Node接口</span><br><span class="hljs-comment">       * <span class="hljs-doctag">@param</span> paramTreeEventType 事件类型枚举</span><br><span class="hljs-comment">       */</span><br>      <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">nodeChanged</span><span class="hljs-params">(FileSystemBrowserTreeNode paramBrowserTreeNode, TreeEventType paramTreeEventType)</span></span>;<br><br>      <span class="hljs-comment">/**</span><br><span class="hljs-comment">       * 树节点Node选中改变事件触发的方法</span><br><span class="hljs-comment">       */</span><br>      <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">selectionChanged</span><span class="hljs-params">()</span></span>;<br>&#125;<br></code></pre></div></td></tr></table></figure><br>BrowserTreeEventAdapter  类为其事件监听处理的抽象实现，代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-16.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BrowserTreeEventAdapter</span></span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">BrowserTreeEventListener</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">nodeChanged</span><span class="hljs-params">(FileSystemBrowserTreeNode node, TreeEventType eventType)</span></span><br><span class="hljs-function">    </span>&#123;<br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">selectionChanged</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure></p>
+<h2 id="读取文件系统对象后，在Tree上进行展示"><a href="#读取文件系统对象后，在Tree上进行展示" class="headerlink" title="读取文件系统对象后，在Tree上进行展示"></a>读取文件系统对象后，在Tree上进行展示</h2><p>&emsp;&emsp;读取文件系统对象后，在Tree上进行展示或者在读取文件系统对象过程中，数据量多的时候，需要显示正在加载的这样一个树节点，以确保良好的用户体验。IDEA本身在工程加载的时候，也有这样的特点。因此要实现一个正在等待加载的节点，实现 FIleSystemBrowTreeNode 接口即可，比较简单，这里就不再贴代码了。</p>
+<h2 id="树节点Node-的模型抽象类及其具体实现的设计和实现"><a href="#树节点Node-的模型抽象类及其具体实现的设计和实现" class="headerlink" title="树节点Node 的模型抽象类及其具体实现的设计和实现"></a>树节点Node 的模型抽象类及其具体实现的设计和实现</h2><p>&emsp;&emsp;Tree的控件，不支持直接操作Node，需要使用TreeModel 来操作节点。由于可能存在多个连接，连接到HDFS，因此会存在多个文件系统Tree，如何展示，是以Tab列表的方式还是以单个Tree的方式展示，用户是可选择的。因此需要实现两个TreeModel。如果用户使用Tab列表展示，那就使用 TabbedBrowserTreeModel 进行操作，如果选择单个Tree进行展示，那就使用SimpleBrowserTreeModel进行操作，因此需要对TreeModel进行抽象设计。  </p>
+<h3 id="抽象类BrowserTreeModel-实现了TreeModel接口。"><a href="#抽象类BrowserTreeModel-实现了TreeModel接口。" class="headerlink" title="抽象类BrowserTreeModel 实现了TreeModel接口。"></a>抽象类BrowserTreeModel 实现了TreeModel接口。</h3><p>&emsp;&emsp;抽象类BrowserTreeModel 实现了TreeModel接口，该类中处理以下几个方面：<br>&emsp;&emsp;①、注册通知BrowserTreeEventListener事件，一当接收到需要更新Node，触发通知进行Node的更新操作<br>&emsp;&emsp;②、注册(显示)等待加载的Node对象。多线程进行操作<br>&emsp;&emsp;③、实现TreeModel接口必须实现的方法<br>&emsp;&emsp;代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br><span class="line">172</span><br><span class="line">173</span><br><span class="line">174</span><br><span class="line">175</span><br><span class="line">176</span><br><span class="line">177</span><br><span class="line">178</span><br><span class="line">179</span><br><span class="line">180</span><br><span class="line">181</span><br><span class="line">182</span><br><span class="line">183</span><br><span class="line">184</span><br><span class="line">185</span><br><span class="line">186</span><br><span class="line">187</span><br><span class="line">188</span><br><span class="line">189</span><br><span class="line">190</span><br><span class="line">191</span><br><span class="line">192</span><br><span class="line">193</span><br><span class="line">194</span><br><span class="line">195</span><br><span class="line">196</span><br><span class="line">197</span><br><span class="line">198</span><br><span class="line">199</span><br><span class="line">200</span><br><span class="line">201</span><br><span class="line">202</span><br><span class="line">203</span><br><span class="line">204</span><br><span class="line">205</span><br><span class="line">206</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义树节点模型TreeModel抽象类</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-16.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">BrowserTreeModel</span></span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">TreeModel</span>, <span class="hljs-title">Disposable</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-keyword">private</span> Set&lt;TreeModelListener&gt; treeModelListeners = <span class="hljs-keyword">new</span> HashSet();<br>    <span class="hljs-keyword">private</span> FileSystemBrowserTreeNode root;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">boolean</span> isDisposed = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">final</span> Set&lt;LoadInProgressTreeNode&gt; loadInProgressNodes = <span class="hljs-keyword">new</span> THashSet();<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化 树节点模型</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> root</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-title">BrowserTreeModel</span><span class="hljs-params">(FileSystemBrowserTreeNode root)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.root = root;<br>        EventUtil.subscribe(root.getProject(), <span class="hljs-keyword">this</span>, BrowserTreeEventListener.TOPIC, <span class="hljs-keyword">this</span>.browserTreeEventListener);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 注册 Node 模型监听事件</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> listener</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">addTreeModelListener</span><span class="hljs-params">(TreeModelListener listener)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.treeModelListeners.add(listener);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 移除Node模型监听事件</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> listener</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">removeTreeModelListener</span><span class="hljs-params">(TreeModelListener listener)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.treeModelListeners.remove(listener);<br>    &#125;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 通知节点修改了，需要处理相关事件</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> treeNode 树节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> eventType 事件类型</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">notifyListeners</span><span class="hljs-params">(FileSystemBrowserTreeNode treeNode, TreeEventType eventType)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">if</span> ((FailsafeUtil.softCheck(<span class="hljs-keyword">this</span>)) &amp;&amp; (FailsafeUtil.softCheck(treeNode)))<br>        &#123;<br>            TreePath treePath = FileSystemBrowserUtils.createTreePath(treeNode);<br>            <span class="hljs-comment">//通知节点修改，按照事件类型，重新处理</span><br>            TreeUtil.notifyTreeModelListeners(<span class="hljs-keyword">this</span>, <span class="hljs-keyword">this</span>.treeModelListeners, treePath, eventType);<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前的Project</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> Project <span class="hljs-title">getProject</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> getRoot().getProject();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 检查是否包含指定的Node</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> paramBrowserTreeNode</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">abstract</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">contains</span><span class="hljs-params">(FileSystemBrowserTreeNode paramBrowserTreeNode)</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 注册加载显示节点（使用定时器多线程加载）</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> node</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">void</span> <span class="hljs-title">registerLoadInProgressNode</span><span class="hljs-params">(LoadInProgressTreeNode node)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">synchronized</span> (<span class="hljs-keyword">this</span>.loadInProgressNodes)<br>        &#123;<br>            <span class="hljs-keyword">boolean</span> startTimer = <span class="hljs-keyword">this</span>.loadInProgressNodes.size() == <span class="hljs-number">0</span>;<br>            <span class="hljs-keyword">this</span>.loadInProgressNodes.add(node);<br>            <span class="hljs-keyword">if</span> (startTimer)<br>            &#123;<br>                Timer reloader = <span class="hljs-keyword">new</span> Timer(<span class="hljs-string">&quot;Hadoop Browser (load in progress reload timer)&quot;</span>);<br>                reloader.schedule(<span class="hljs-keyword">new</span> LoadInProgressRefreshTask(), <span class="hljs-number">0L</span>, <span class="hljs-number">50L</span>);<br>            &#125;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 加载等待显示节点的线程类</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LoadInProgressRefreshTask</span></span><br><span class="hljs-class">            <span class="hljs-keyword">extends</span> <span class="hljs-title">TimerTask</span></span><br><span class="hljs-class">    </span>&#123;<br>        <span class="hljs-keyword">int</span> iterations = <span class="hljs-number">0</span>;<br><br>        <span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-title">LoadInProgressRefreshTask</span><span class="hljs-params">()</span></span><br><span class="hljs-function">        </span>&#123;<br>        &#125;<br><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">run</span><span class="hljs-params">()</span></span><br><span class="hljs-function">        </span>&#123;<br>            <span class="hljs-keyword">synchronized</span> (loadInProgressNodes)<br>            &#123;<br>                Iterator&lt;LoadInProgressTreeNode&gt; loadInProgressNodesIterator =loadInProgressNodes.iterator();<br>                <span class="hljs-keyword">while</span> (loadInProgressNodesIterator.hasNext())<br>                &#123;<br>                    LoadInProgressTreeNode loadInProgressTreeNode = loadInProgressNodesIterator.next();<br>                    <span class="hljs-keyword">try</span><br>                    &#123;<br>                        <span class="hljs-keyword">if</span> (loadInProgressTreeNode.isDisposed())<br>                        &#123;<br>                            loadInProgressNodesIterator.remove();<br>                        &#125; <span class="hljs-keyword">else</span><br>                        &#123;<br>                           notifyListeners(loadInProgressTreeNode, TreeEventType.NODES_CHANGED);<br>                        &#125;<br>                    &#125; <span class="hljs-keyword">catch</span> (ProcessCanceledException e)<br>                    &#123;<br>                        loadInProgressNodesIterator.remove();<br>                    &#125;<br>                &#125;<br>                <span class="hljs-keyword">if</span> (loadInProgressNodes.isEmpty())<br>                &#123;<br>                    cancel();<br>                &#125;<br>            &#125;<br>            <span class="hljs-keyword">this</span>.iterations += <span class="hljs-number">1</span>;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取根节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> FileSystemBrowserTreeNode <span class="hljs-title">getRoot</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span>  FailsafeUtil.get(<span class="hljs-keyword">this</span>.root);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取父节点的子节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> parent</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> index</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> Object <span class="hljs-title">getChild</span><span class="hljs-params">(Object parent, <span class="hljs-keyword">int</span> index)</span></span><br><span class="hljs-function">    </span>&#123;<br>        FileSystemBrowserTreeNode treeChild = ((FileSystemBrowserTreeNode) parent).getChildAt(index);<br>        <span class="hljs-keyword">if</span> ((treeChild <span class="hljs-keyword">instanceof</span> LoadInProgressTreeNode))<br>        &#123;<br>            registerLoadInProgressNode((LoadInProgressTreeNode) treeChild);<br>        &#125;<br>        <span class="hljs-keyword">return</span> treeChild;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取父节点的子节点的数量</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> parent</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> <span class="hljs-title">getChildCount</span><span class="hljs-params">(Object parent)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> ((FileSystemBrowserTreeNode) parent).getChildCount();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 判断节点是否是叶子节点</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> node</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">isLeaf</span><span class="hljs-params">(Object node)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> ((FileSystemBrowserTreeNode) node).isLeaf();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取子节点所在的索引</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> parent</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> child</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">int</span> <span class="hljs-title">getIndexOfChild</span><span class="hljs-params">(Object parent, Object child)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> ((FileSystemBrowserTreeNode) parent).getIndex((FileSystemBrowserTreeNode) child);<br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">valueForPathChanged</span><span class="hljs-params">(TreePath path, Object newValue)</span></span><br><span class="hljs-function">    </span>&#123;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispose</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">if</span> (!<span class="hljs-keyword">this</span>.isDisposed)<br>        &#123;<br>            <span class="hljs-keyword">this</span>.isDisposed = <span class="hljs-keyword">true</span>;<br>            <span class="hljs-keyword">this</span>.treeModelListeners.clear();<br>            <span class="hljs-keyword">this</span>.loadInProgressNodes.clear();<br>            <span class="hljs-keyword">this</span>.root = <span class="hljs-keyword">null</span>;<br>        &#125;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 树节点事件监听处理</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> BrowserTreeEventListener browserTreeEventListener = <span class="hljs-keyword">new</span> BrowserTreeEventAdapter()<br>    &#123;<br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">nodeChanged</span><span class="hljs-params">(FileSystemBrowserTreeNode node, TreeEventType eventType)</span></span><br><span class="hljs-function">        </span>&#123;<br>            <span class="hljs-keyword">if</span> (contains(node))<br>            &#123;<br>               notifyListeners(node, eventType);<br>            &#125;<br>        &#125;<br>    &#125;;<br>&#125;<br></code></pre></div></td></tr></table></figure></p>
+<h3 id="TreeModel的具体实现"><a href="#TreeModel的具体实现" class="headerlink" title="TreeModel的具体实现"></a>TreeModel的具体实现</h3><p>&emsp;&emsp;说完了TreeModel的抽象类，下面说说TreeModel的具体实现。TreeModel的具体实现有两种，TabbedBrowserTreeModel 和 SimpleBrowserTreeModel。当用户选择文件系统树以Tab列表的方式展示时，树的Node操作使用的是 TabbedBrowserTreeModel，当用户选择以单个树展示时，树的Node操作使用SimpleBrowserTreeModel。<br>TabbedBrowserTreeModel 类，继承抽象类BrowserTreeModel。构造函数中使用 文件系统连接对象ConnectionHandler 作为参数，代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> *文件系统树以Tab列表的方式展示时，树的Node操作使用的是 TabbedBrowserTreeModel</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-16.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">TabbedBrowserTreeModel</span></span><br><span class="hljs-class">        <span class="hljs-keyword">extends</span> <span class="hljs-title">BrowserTreeModel</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化TreeModel</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> connectionHandler 文件系统连接处理接口</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">TabbedBrowserTreeModel</span><span class="hljs-params">(ConnectionHandler connectionHandler)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>(connectionHandler.getObjectBundle());<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 判断是否包含指定的节点对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> node 指定的TreeNode</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">contains</span><span class="hljs-params">(FileSystemBrowserTreeNode node)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> getConnectionHandler() == node.getConnectionHandler();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件连接处理对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> ConnectionHandler <span class="hljs-title">getConnectionHandler</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> getRoot().getConnectionHandler();<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure><br>&emsp;&emsp;SimpleBrowserTreeModel ，继承抽象类BrowserTreeModel ，有两个构造函数，一个是无参构造，另一个传入 工程Project对象和文件系统连接集合对象(作为树的根节点)，代码如下：<br> <figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs Java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义简单的TreeModel的实现</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-16.</span><br><span class="hljs-comment"> */</span><br><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SimpleBrowserTreeModel</span></span><br><span class="hljs-class">        <span class="hljs-keyword">extends</span> <span class="hljs-title">BrowserTreeModel</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">SimpleBrowserTreeModel</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>(FailsafeUtil.DUMMY_PROJECT, <span class="hljs-keyword">null</span>);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> connectionBundle</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">SimpleBrowserTreeModel</span><span class="hljs-params">(Project project, ConnectionBundle connectionBundle)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>(<span class="hljs-keyword">new</span> SimpleBrowserTreeRoot(project, connectionBundle));<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 判断是否包含指定的TreeNode</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> node</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">contains</span><span class="hljs-params">(FileSystemBrowserTreeNode node)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">true</span>;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispose</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>.dispose();<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure></p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>&emsp;&emsp;文件系统树节点的设计关系到整个文件系统对象的是如何展示的，定义文件树Tree的TreeNode接口，并实现了等待加载对象的等待节点TreeNode的实现。抽象了TreeNode的操作TreeModel。下节将结合本节的TreeNode和TreeModel ，实现Tree的开发。</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Hadoop/">Hadoop</a>
+                    
+                      <a class="hover-with-bg" href="/tags/IDEA/">IDEA</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现2</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2017/07/26/IntellijPluginHadoop/002-IntellijPluginHadoop/">
+                        <span class="hidden-mobile">HadoopIntellijPlugin整体设计和实现思路</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+            <hr>
+            
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+		   坚持技术分享，你的支持将鼓励我继续创作！
+        </span>
+		<input type="button" id="btn_donate" style="background-color: red; color: white; border: none; height=35; width=80" value="打赏"/>
+        <br>
+      </div>  
+	<div id="donate_guide" class="donate_bar center" style="display: none">
+		<!-- 支付宝打赏图案 -->
+		<img src="/img/zhifubao.JPG" srcset="/img/loading.gif" lazyload alt="支付宝打赏"> 
+		<!-- 微信打赏图案 -->
+		<img src="/img/wechatpay.jpg" srcset="/img/loading.gif" lazyload alt="微信打赏">  
+    </div>
+	<script type="text/javascript">
+		document.getElementById('btn_donate').onclick = function(){
+			var qr=document.getElementById("donate_guide");
+			"none"===qr.style.display?qr.style.display="block":qr.style.display="none"
+		}
+	</script>
+</div>
+            
+            
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js', function () {
+        var gitalk = new Gitalk({
+          clientID: 'c670ef2bb24287e88e04',
+          clientSecret: 'e48c715a6abaad0526c7a9e5213a85b23760a705',
+          repo: 'fangyuzhong2016.github.io',
+          owner: 'fangyuzhong2016',
+          admin: ["fangyuzhong2016"],
+          id: '8bb0537be6207c7a14341789713b53cf',
+          language: 'zh-CN',
+          labels: ["Gitalk"],
+          perPage: 10,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false,
+          proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token'
+        });
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>博客使用Hexo搭建</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>博客风格模板Fluid</span></a> <div> <span id="timeDate">载入天数...</span> <span id="times">载入时分秒...</span> <script src="/js/duration.js"></script> </div> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?e050beeb708f14713adb2b820c6c5ee3";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

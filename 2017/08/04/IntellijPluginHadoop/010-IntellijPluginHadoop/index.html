@@ -1,0 +1,627 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/globe.ico">
+  <link rel="icon" href="/img/globe.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="Hadoop-IntelliJ-Plugin 的国际化多语言支持比较简单，直接使用了Java的本地化实现机制。先简单的介绍一下Java的本地化方法。">
+  <meta name="author" content="fyz">
+  <meta name="keywords" content="">
+  
+  <title>HadoopIntellijPlugin插件国际化多语言支持设计和实现 | 扫地老僧</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.6.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":true},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"e050beeb708f14713adb2b820c6c5ee3","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 40vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>扫地老僧 - 专注GIS、大数据和AI人工智能领域</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/personalworks/">
+                <i class="iconfont icon-map"></i>
+                个人作品
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/banner_img.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="HadoopIntellijPlugin插件国际化多语言支持设计和实现">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      fyz
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2017-08-04 16:18" pubdate>
+        2017年8月4日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2.3k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      29
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">HadoopIntellijPlugin插件国际化多语言支持设计和实现</h1>
+            
+            <div class="markdown-body">
+              <p>Hadoop-IntelliJ-Plugin 的国际化多语言支持比较简单，直接使用了Java的本地化实现机制。先简单的介绍一下Java的本地化方法。  </p>
+<h2 id="本地化介绍"><a href="#本地化介绍" class="headerlink" title="本地化介绍"></a>本地化介绍</h2><p>&emsp;&emsp;“国际化信息”也称为“本地化信息”，一般需要两个条件才可以确定一个特定类型的本地化信息，它们分别是“语言类型”和“国家/地区的类型”。如中文本地化信息既有中国大陆地区的中文，又有中国台湾、中国香港地区的中文，还有新加坡地区的中文。<br>&emsp;&emsp;Java通过java.util.Locale类表示一个本地化对象，它允许通过语言参数和国家/地区参数创建一个确定的本地化对象。语言参数使用ISO标准语言代码表示，这些代码是由ISO-639标准定义的，每一种语言由两个小写字母表示。在许多网站上都可以找到这些代码的完整列表，下面的网址是提供了标准语言代码的信息：<a target="_blank" rel="noopener" href="http://www.loc.gov/standards/iso639-2/php/English_list.php%E3%80%82">http://www.loc.gov/standards/iso639-2/php/English_list.php。</a><br>&emsp;&emsp;国家/地区参数也由标准的ISO国家/地区代码表示，这些代码是由ISO-3166标准定义的，每个国家/地区由两个大写字母表示。用户可以从以下网址查看ISO-3166的标准代码：<a target="_blank" rel="noopener" href="http://www.iso.ch/iso/en/prods-services/iso3166ma/02iso-3166-code-lists/list-en1.html%E3%80%82">http://www.iso.ch/iso/en/prods-services/iso3166ma/02iso-3166-code-lists/list-en1.html。</a><br>&emsp;&emsp;下表给出了一些语言和国家/地区的标准代码：<br><img src="1.png" srcset="/img/loading.gif" lazyload></p>
+<p>&emsp;&emsp;Java.util.Locale类是表示语言和国家/地区信息的本地化类，它是创建国际化应用的基础。如下面的例子：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">//带有语言和国家/地区信息的本地化对象</span><br>Locale locale1 = <span class="hljs-keyword">new</span> Locale(<span class="hljs-string">&quot;zh&quot;</span>,<span class="hljs-string">&quot;CN&quot;</span>);<br><span class="hljs-comment">//只有语言信息的本地化对象</span><br>Locale locale2 = <span class="hljs-keyword">new</span> Locale(<span class="hljs-string">&quot;zh&quot;</span>);<br><span class="hljs-comment">//等同于Locale(&quot;zh&quot;,&quot;CN&quot;)</span><br>Locale locale3 = Locale.CHINA;<br><span class="hljs-comment">//等同于Locale(&quot;zh&quot;)</span><br>Locale locale4 = Locale.CHINESE;<br></code></pre></div></td></tr></table></figure>
+
+<p>&emsp;&emsp;如果有些系统需要支持多种语言设置，那就要准备对应的语言资源文件，并以规范的方式进行命名。国际化资源文件的命名规范规定资源名称采用以下的方式进行命名： </p>
+<blockquote>
+ <center> <资源名>_<语言代码>_<国家/地区代码>.properties </center>
+</blockquote>
+<p>&emsp;&emsp;其中，语言代码和国家/地区代码都是可选的。&lt;资源名&gt;.properties命名的国际化资源文件是默认的资源文件，即某个本地化类型在系统中找不到对应的资源文件，就采用这个默认的资源文件。&lt;资源名&gt;_&lt;语言代码&gt;.properties命名的国际化资源文件是某一语言默认的资源文件，即某个本地化类型在系统中找不到精确匹配的资源文件，将采用相应语言默认的资源文件。拿我们插件的项目来说明，插件项目目前只支持简体中文和英文两种:  </p>
+<div class="hljs code-wrapper"><pre><code>  HadoopNavigator_en_US.properties  表示的是英文语言资源文件  
+  HadoopNavigator_zh_CN.properties 表示的是简体中文语言资源文件  
+</code></pre></div>
+<p>英文语言信息在资源文件以属性名/值的方式表示：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">systemText=Hadoop FileSystem<br>settingText=Setting<br>back=Back<br>forward=Forward<br>expandAll=Expand All<br>collapseAll=Collapse All<br>showObjectProperties=Show Object Properties<br>hideObjectProperties=Hide Object Properties<br>connectAction=Connect<br>disconnectAction=DisConnect<br>refreshObjectsStatusAction=Refresh<br>CreateDirectoryAction=Create Directory<br>deleteDirectoryOrFileAction=Delete Directory<br>downDirectoryOrFileAction=Down Directory Or File<br>refreshDirectoryAction=Refresh<br>uploadDirectoryAction=Upload Directory<br>uploadFileAction=Upload File<br>viewFileAction=View<br>objectTypeDirectory=Directory<br>objectTypeFile=File<br>directoryPath=Directory Path<br>directoryOwner=Directory Owner<br></code></pre></div></td></tr></table></figure>
+<p>中文语言信息健/值：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">systemText=Hadoop\u6587\u4ef6\u7cfb\u7edf<br>settingText=\u8bbe\u7f6e<br>back=\u4e0a\u4e00\u8282\u70b9<br>forward=\u4e0b\u4e00\u8282\u70b9<br>expandAll=\u5168\u90e8\u5c55\u5f00<br>collapseAll=\u5168\u90e8\u6298\u53e0<br>showObjectProperties=\u663e\u793a\u5bf9\u8c61\u5c5e\u6027<br>hideObjectProperties=\u9690\u85cf\u5bf9\u8c61\u5c5e\u6027<br>connectAction=\u8fde\u63a5<br>disconnectAction=\u65ad\u5f00\u8fde\u63a5<br>refreshObjectsStatusAction=\u5237\u65b0<br>CreateDirectoryAction=\u521b\u5efa\u76ee\u5f55<br>deleteDirectoryOrFileAction=\u5220\u9664<br>downDirectoryOrFileAction=\u4e0b\u8f7d<br>refreshDirectoryAction=\u5237\u65b0<br>uploadDirectoryAction=\u4e0a\u4f20\u76ee\u5f55<br>uploadFileAction=\u4e0a\u4f20\u6587\u4ef6<br>viewFileAction=\u67e5\u770b\u6587\u4ef6<br>objectTypeDirectory=\u76ee\u5f55<br>objectTypeFile=\u6587\u4ef6<br>directoryPath=\u76ee\u5f55\u8def\u5f84<br>directoryOwner=\u76ee\u5f55\u6240\u6709\u8005<br>directoryPermission=\u76ee\u5f55\u6743\u9650<br>directoryGroup=\u76ee\u5f55\u6240\u5728\u7684<br></code></pre></div></td></tr></table></figure>
+
+<p>&emsp;&emsp;本地化不同的同一资源文件，虽然属性值各不相同，但属性名却是相同的，这样应用程序就可以通过Locale对象和属性名精确调用到某个具体的属性值了。  </p>
+<p>&emsp;&emsp;中文的本地化资源文件内容采用了特殊的编码表示中文字符，这是因为资源文件对文件内容有严格的要求：只能包含ASCII字符。所以必须将非ASCII字符的内容转换为Unicode代码的表示方式。如上面中文的HadoopNavigator_zh_CN.properties资源文件的属性值中文字符串对应的Unicode代码串。  </p>
+<p>&emsp;&emsp;如果在应用开发时，直接采用Unicode代码编辑资源文件是很不方便的，所以，通常我们直接使用正常的方式编写资源文件，在测试或部署时再采用工具进行转换。JDK在bin目录下为我们提供了一个完成此项功能的native2ascii工具，它可以将中文字符的资源文件转换为Unicode代码格式的文件，命令格式如下：</p>
+<blockquote>
+<center>native2ascii [-reverse] [-encoding 编码] [输入文件 [输出文件]] </center>
+</blockquote>
+<p>&emsp;&emsp;对于语言资源文件的读取解析，Java为我们提供了用于加载本地化资源文件的方便类java.util.ResourceBoundle。ResourceBoundle为加载及访问资源文件提供便捷的操作，下面的语句从相对于类路径的目录中加载一个名为resource的本地化资源文件：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 设置本地化资源</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> locale</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setResourceBundle</span><span class="hljs-params">(Locale locale)</span></span><br><span class="hljs-function"></span>&#123;<br>    resourceBundle = ResourceBundle.getBundle(<span class="hljs-string">&quot;HadoopNavigator&quot;</span>, locale);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>&emsp;&emsp;注意资源文件的路径。ResourceBundle在加载资源时，如果指定的本地化资源文件不存在，它按以下顺序尝试加载其他的资源：本地系统默认本地化对象对应的资源→默认的资源。</p>
+<h2 id="插件的国际化多语言设计和实现"><a href="#插件的国际化多语言设计和实现" class="headerlink" title="插件的国际化多语言设计和实现"></a>插件的国际化多语言设计和实现</h2><h3 id="本地化语言设置管理类-LocalLanguageManager"><a href="#本地化语言设置管理类-LocalLanguageManager" class="headerlink" title="本地化语言设置管理类 LocalLanguageManager"></a>本地化语言设置管理类 LocalLanguageManager</h3><p>&emsp;&emsp;定义一个本地化语言设置管理类 LocalLanguageManager ，继承ApplicationComponent，Application级别插件，在IDEA启动时读取操作系统默认的语言类进行相关设置。该类还管理语言设置更改后的事件通知。当用户更改了界面UI的语言设置，会触发LanguageSettingListener ，重新加载语言资源文件，并且通知相关组件，需要调整界面语言。LocalLanguageManager 类代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义本地化语言管理类</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-29.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LocaleLanguageManager</span>  <span class="hljs-keyword">implements</span> <span class="hljs-title">ApplicationComponent</span></span><br><span class="hljs-class"></span>&#123;<br>    ResourceBundle resourceBundle=<span class="hljs-keyword">null</span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取本地化语言管理</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> LocaleLanguageManager <span class="hljs-title">getInstance</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span>  ApplicationManager.getApplication().getComponent(LocaleLanguageManager.class);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取本地化资源对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> ResourceBundle <span class="hljs-title">getResourceBundle</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> resourceBundle;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 设置本地化资源</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> locale</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setResourceBundle</span><span class="hljs-params">(Locale locale)</span></span><br><span class="hljs-function">    </span>&#123;<br>        resourceBundle = ResourceBundle.getBundle(<span class="hljs-string">&quot;HadoopNavigator&quot;</span>, locale);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 组件初始化 获取系统默认的语言</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initComponent</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-comment">//获取当前操作系统的语言环境，默认加载</span><br>        Locale localeDefault = Locale.getDefault();<br>        setResourceBundle(localeDefault);<br>        EventUtil.subscribe(<span class="hljs-keyword">null</span>, ProjectLifecycleListener.TOPIC, <span class="hljs-keyword">this</span>.projectLifecycleListener);<br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">disposeComponent</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>    &#125;<br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getComponentName</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span>  <span class="hljs-string">&quot;HadoopNavigator.LocaleLanguageManager&quot;</span>;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 语言改变监听事件处理</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> ProjectLifecycleListener projectLifecycleListener = <span class="hljs-keyword">new</span> ProjectLifecycleListener.Adapter()<br>    &#123;<br>        Project project;<br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">projectComponentsInitialized</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Project project)</span></span><br><span class="hljs-function">        </span>&#123;<br>            <span class="hljs-keyword">this</span>.project=project;<br>            EventUtil.subscribe(project,<span class="hljs-keyword">null</span>, LanguageSettingsListener.TOPIC, <span class="hljs-keyword">this</span>.languageSettingsListener);<br>        &#125;<br><br>        <span class="hljs-keyword">private</span> LanguageSettingsListener languageSettingsListener = <span class="hljs-keyword">new</span> LanguageSettingsListener()<br>        &#123;<br>            <span class="hljs-meta">@Override</span><br>            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">LanguageChanged</span><span class="hljs-params">(Locale locale)</span></span><br><span class="hljs-function">            </span>&#123;<br>                resourceBundle = ResourceBundle.getBundle(<span class="hljs-string">&quot;HadoopNavigator&quot;</span>, locale);<br>                <span class="hljs-keyword">final</span> ConnectionBundle connectionBundle = ConnectionManager.getInstance(project).getConnectionBundle();<br>                <span class="hljs-keyword">for</span>(ConnectionHandler connectionHandler :connectionBundle.getConnectionHandlers())<br>                &#123;<br>                    <span class="hljs-keyword">if</span> (connectionHandler != <span class="hljs-keyword">null</span>)<br>                    &#123;<br>                        connectionHandler.getObjectBundle().refreshTreeChildren();<br>                    &#125;<br>                &#125;<br>                <span class="hljs-comment">//通知相关组件，需要调整界面语言</span><br>                EventUtil.notify(project, UpdateLanguageListener.TOPIC).UpdateLanguage();<br>            &#125;<br>        &#125;;<br>    &#125;;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h3 id="国际化语言设置UI设计"><a href="#国际化语言设置UI设计" class="headerlink" title="国际化语言设置UI设计"></a>国际化语言设置UI设计</h3><p>(1)、RegionSetting类，国际化语言设置类，实现IDEA 配置Configuration接口，可以从配置中读取当前设置的语言，也可以将当前设置的语言写入XML。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义国际化语言设置类</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-8-1.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RegionalSettings</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Configuration</span>&lt;<span class="hljs-title">RegionalSettingsEditorForm</span>&gt;</span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-keyword">private</span> Locale locale = Locale.getDefault();<br><br>    <span class="hljs-keyword">private</span> Project project=<span class="hljs-keyword">null</span>;<br><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setProject</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.project = project;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取国际化语言配置实例对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> RegionalSettings <span class="hljs-title">getInstance</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> GeneralProjectSettings.getInstance(project).getRegionalSettings();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 应用</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@throws</span> ConfigurationException</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">apply</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> ConfigurationException</span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>.apply();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前配置的语言对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> Locale <span class="hljs-title">getLocale</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> locale;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 设置当前国际化语言</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> locale</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setLocale</span><span class="hljs-params">(Locale locale)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.locale = locale;<br>    &#125;<br>    <span class="hljs-comment">/*********************************************************</span><br><span class="hljs-comment">     *                      Configuration                    *</span><br><span class="hljs-comment">     *********************************************************/</span><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 实例化国际化设置UI</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> RegionalSettingsEditorForm <span class="hljs-title">createConfigurationEditor</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> RegionalSettingsEditorForm(<span class="hljs-keyword">this</span>);<br>    &#125;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getConfigElementName</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;regional-settings&quot;</span>;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 读取配置，获取当前设置的国际化语言</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">readConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function">    </span>&#123;<br>        String localeString = SettingsUtil.getString(element, <span class="hljs-string">&quot;locale&quot;</span>, Locale.getDefault().toString());<br>        <span class="hljs-keyword">boolean</span> useSystemLocale = localeString.equals(<span class="hljs-string">&quot;SYSTEM_DEFAULT&quot;</span>);<br>        <span class="hljs-keyword">if</span> (useSystemLocale)<br>        &#123;<br>            <span class="hljs-keyword">this</span>.locale = Locale.getDefault();<br>        &#125; <span class="hljs-keyword">else</span><br>        &#123;<br>           <span class="hljs-keyword">this</span>.locale = LocaleOption.getLocalOption(localeString).getLocale();<br>        &#125;<br>        LocaleLanguageManager.getInstance().setResourceBundle(locale);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 将当前的国际化配置写入配置文件</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">writeConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function">    </span>&#123;<br>        String localLanguage =<span class="hljs-string">&quot;SYSTEM_DEFAULT&quot;</span>;<br>        <span class="hljs-keyword">if</span>(locale!=<span class="hljs-keyword">null</span>)<br>        &#123;<br>            localLanguage = locale.getLanguage()+<span class="hljs-string">&quot;-&quot;</span>+locale.getCountry();<br>        &#125;<br>        SettingsUtil.setString(element, <span class="hljs-string">&quot;locale&quot;</span>, localLanguage);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>(2)、UI对象RegionalSettingsEditorForm，界面上设置语言选择的下拉列表，初始化中文和英文的语言进行填充。代码比较简单，就不贴了。</p>
+<h3 id="语言标志类LanguageKeyWord"><a href="#语言标志类LanguageKeyWord" class="headerlink" title="语言标志类LanguageKeyWord"></a>语言标志类LanguageKeyWord</h3><p>&emsp;&emsp;定义界面控件语言标示类LanguageKeyWord，将插件界面UI、对话框UI等等需要支持多语言的控件，设置关键字标志，界面控件语言更改可以使用下面的方法：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java">displayName = LocaleLanguageManager.getInstance().getResourceBundle().getString(LanguageKeyWord.DFSLOCATIONS);<br></code></pre></div></td></tr></table></figure>
+
+<p>&emsp;&emsp;多语言支持的配置界面如下：<br><img src="2.png" srcset="/img/loading.gif" lazyload></p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Hadoop/">Hadoop</a>
+                    
+                      <a class="hover-with-bg" href="/tags/IDEA/">IDEA</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2017/08/05/IntellijPluginHadoop/011-IntellijPluginHadoop/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件HDFS文件系统常用操作类</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2017/08/03/IntellijPluginHadoop/009-IntellijPluginHadoop/">
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件文件系统配置设计和实现2</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+            <hr>
+            
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+		   坚持技术分享，你的支持将鼓励我继续创作！
+        </span>
+		<input type="button" id="btn_donate" style="background-color: red; color: white; border: none; height=35; width=80" value="打赏"/>
+        <br>
+      </div>  
+	<div id="donate_guide" class="donate_bar center" style="display: none">
+		<!-- 支付宝打赏图案 -->
+		<img src="/img/zhifubao.JPG" srcset="/img/loading.gif" lazyload alt="支付宝打赏"> 
+		<!-- 微信打赏图案 -->
+		<img src="/img/wechatpay.jpg" srcset="/img/loading.gif" lazyload alt="微信打赏">  
+    </div>
+	<script type="text/javascript">
+		document.getElementById('btn_donate').onclick = function(){
+			var qr=document.getElementById("donate_guide");
+			"none"===qr.style.display?qr.style.display="block":qr.style.display="none"
+		}
+	</script>
+</div>
+            
+            
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js', function () {
+        var gitalk = new Gitalk({
+          clientID: 'c670ef2bb24287e88e04',
+          clientSecret: 'e48c715a6abaad0526c7a9e5213a85b23760a705',
+          repo: 'fangyuzhong2016.github.io',
+          owner: 'fangyuzhong2016',
+          admin: ["fangyuzhong2016"],
+          id: '00e8c7b55a3300daaee9776df334068f',
+          language: 'zh-CN',
+          labels: ["Gitalk"],
+          perPage: 10,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false,
+          proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token'
+        });
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>博客使用Hexo搭建</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>博客风格模板Fluid</span></a> <div> <span id="timeDate">载入天数...</span> <span id="times">载入时分秒...</span> <script src="/js/duration.js"></script> </div> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?e050beeb708f14713adb2b820c6c5ee3";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

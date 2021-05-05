@@ -1,0 +1,609 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/globe.ico">
+  <link rel="icon" href="/img/globe.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="本节，主要介绍Hadoop-IntelliJ-Plugin 的HDFS连接处理的设计和实现。主要包括HDFS连接Connection的接口定义、HDFS连接的实现、HDFS连接的缓存处理、和连接相关配置项。">
+  <meta name="author" content="fyz">
+  <meta name="keywords" content="">
+  
+  <title>HadoopIntellijPlugin插件HDFS文件系统连接Connection设计和实现 | 扫地老僧</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.6.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":true},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"e050beeb708f14713adb2b820c6c5ee3","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 40vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>扫地老僧 - 专注GIS、大数据和AI人工智能领域</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/personalworks/">
+                <i class="iconfont icon-map"></i>
+                个人作品
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/banner_img.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="HadoopIntellijPlugin插件HDFS文件系统连接Connection设计和实现">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      fyz
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2017-07-31 16:17" pubdate>
+        2017年7月31日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      2k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      28
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">HadoopIntellijPlugin插件HDFS文件系统连接Connection设计和实现</h1>
+            
+            <div class="markdown-body">
+              <p> &emsp;&emsp;本节，主要介绍Hadoop-IntelliJ-Plugin 的HDFS连接处理的设计和实现。主要包括HDFS连接Connection的接口定义、HDFS连接的实现、HDFS连接的缓存处理、和连接相关配置项。整个类的设计如下：<br><img src="1.png" srcset="/img/loading.gif" lazyload></p>
+<h2 id="HDFS连接接口ConnectionHandler和其实现类ConnectionHandlerImpl"><a href="#HDFS连接接口ConnectionHandler和其实现类ConnectionHandlerImpl" class="headerlink" title="HDFS连接接口ConnectionHandler和其实现类ConnectionHandlerImpl"></a>HDFS连接接口ConnectionHandler和其实现类ConnectionHandlerImpl</h2><h3 id="ConnectionHandler接口。"><a href="#ConnectionHandler接口。" class="headerlink" title="ConnectionHandler接口。"></a>ConnectionHandler接口。</h3><p>&emsp;&emsp;该接口主要定义了获取HDFS连接对象Configuration、HDFS文件系统对象FileSystem、设置连接的相关信息、获取连接关联的文件系统对象的集合、获取连接对应的文件系统版本、判断HDFS文件系统是否可以连接上、测试HDFS连接、获取HDFS连接的状态等。接口定义的代码：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br><span class="line">101</span><br><span class="line">102</span><br><span class="line">103</span><br><span class="line">104</span><br><span class="line">105</span><br><span class="line">106</span><br><span class="line">107</span><br><span class="line">108</span><br><span class="line">109</span><br><span class="line">110</span><br><span class="line">111</span><br><span class="line">112</span><br><span class="line">113</span><br><span class="line">114</span><br><span class="line">115</span><br><span class="line">116</span><br><span class="line">117</span><br><span class="line">118</span><br><span class="line">119</span><br><span class="line">120</span><br><span class="line">121</span><br><span class="line">122</span><br><span class="line">123</span><br><span class="line">124</span><br><span class="line">125</span><br><span class="line">126</span><br><span class="line">127</span><br><span class="line">128</span><br><span class="line">129</span><br><span class="line">130</span><br><span class="line">131</span><br><span class="line">132</span><br><span class="line">133</span><br><span class="line">134</span><br><span class="line">135</span><br><span class="line">136</span><br><span class="line">137</span><br><span class="line">138</span><br><span class="line">139</span><br><span class="line">140</span><br><span class="line">141</span><br><span class="line">142</span><br><span class="line">143</span><br><span class="line">144</span><br><span class="line">145</span><br><span class="line">146</span><br><span class="line">147</span><br><span class="line">148</span><br><span class="line">149</span><br><span class="line">150</span><br><span class="line">151</span><br><span class="line">152</span><br><span class="line">153</span><br><span class="line">154</span><br><span class="line">155</span><br><span class="line">156</span><br><span class="line">157</span><br><span class="line">158</span><br><span class="line">159</span><br><span class="line">160</span><br><span class="line">161</span><br><span class="line">162</span><br><span class="line">163</span><br><span class="line">164</span><br><span class="line">165</span><br><span class="line">166</span><br><span class="line">167</span><br><span class="line">168</span><br><span class="line">169</span><br><span class="line">170</span><br><span class="line">171</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义文件系统的连接处理接口</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-15.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">interface</span> <span class="hljs-title">ConnectionHandler</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Disposable</span>,<span class="hljs-title">ConnectionProvider</span>, <span class="hljs-title">Presentable</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前的intellij的工程</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">Project <span class="hljs-title">getProject</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 测试HDFS是否可以连接</span><br><span class="hljs-comment">     *<span class="hljs-doctag">@param</span></span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">createTestConnection</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> IOException</span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前HDFS的连接Configuration对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">Configuration <span class="hljs-title">getMainConnection</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前连接的HDFS文件系统对象</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystem <span class="hljs-title">getMainFileSystem</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接状态</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionStatus <span class="hljs-title">getConnectionStatus</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接字符串</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionInfo <span class="hljs-title">getConnectionInfo</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 设置连接字符串</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> paramConnectionInfo</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">setConnectionInfo</span><span class="hljs-params">(ConnectionInfo paramConnectionInfo)</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 连接是否激活</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isActive</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接对应的文件系统</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystemType <span class="hljs-title">getFileSystemType</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统版本</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">double</span> <span class="hljs-title">getFileSystemVersion</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 连接是否连接上</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isConnected</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">int</span> <span class="hljs-title">getIdleMinutes</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取文件系统的相关信息</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">FileSystemInfo <span class="hljs-title">getFileSystemInfo</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 释放连接</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">void</span> <span class="hljs-title">disconnect</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接的ID</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">String <span class="hljs-title">getId</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接的用户名称</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">String <span class="hljs-title">getUserName</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接显示名称</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">String <span class="hljs-title">getPresentableText</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接引用对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionHandlerRef <span class="hljs-title">getRef</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 是否是虚拟连接</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isVirtual</span><span class="hljs-params">()</span></span>;<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接加载监控对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionLoadMonitor <span class="hljs-title">getLoadMonitor</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取连接集合</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionBundle <span class="hljs-title">getConnectionBundle</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 是否可连接</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">canConnect</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *是否是有效连接</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> paramBoolean</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isValid</span><span class="hljs-params">(<span class="hljs-keyword">boolean</span> paramBoolean)</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 是否是有效连接</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">boolean</span> <span class="hljs-title">isValid</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *连接关联对象的集合</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">FileSystemObjectBundle <span class="hljs-title">getObjectBundle</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     *</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>     <span class="hljs-function">Filter&lt;FileSystemBrowserTreeNode&gt; <span class="hljs-title">getObjectTypeFilter</span><span class="hljs-params">()</span></span>;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 连接配置</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function">ConnectionSettings <span class="hljs-title">getSettings</span><span class="hljs-params">()</span></span>;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h3 id="HDFS连接的实现ConnectionHandlerImpl"><a href="#HDFS连接的实现ConnectionHandlerImpl" class="headerlink" title="HDFS连接的实现ConnectionHandlerImpl"></a>HDFS连接的实现ConnectionHandlerImpl</h3><p>&emsp;&emsp;在实现类中，我们重点看下 如何通过外部配置实现连接到HDFS的。在实现类初始化方法中，首先创建一个HDFS的Configuration对象，由于IDEA插件的启动是由IDEA框架去自动维护，HDFS读取配置的时候是默认当前线程类的加载器，这里其实就是IDEA的主程序的线程，也就是说，如果使用IDEA的主线程类的加载器加载HDFS配置，那么在运行的时候，HDFS实例化的时候会找不到HDFS 的相关的jar 包。因此这里需要绕一下，IDEA框架启动装配插件后，在插件初始化HDFS配置代码处，重新设置HDFS配置的类加载器，然后再设置Configuration的相关配置对象，这样才能从插件路径下找到HDFS的jar包。设置HDFS的Configuration后，调用HDFS的FileSystem.get(Configuration) ，获取到HDFS的文件系统对象FileSystem，然后测试HDFS是否能够连接上。测试HDFS连接，这里实现比较简单，使用FileSystem.exties(path)  判断根目录”/“，是否存在即可。如果“/”目录不存在或者该方法如果抛出一个IOException 异常，表明HDFS因某种原因，连接不上。代码实现如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化连接实现</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> connectionBundle</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> connectionSettings</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">ConnectionHandlerImpl</span><span class="hljs-params">(ConnectionBundle connectionBundle, ConnectionSettings connectionSettings)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">this</span>.connectionBundle = connectionBundle;<br>    <span class="hljs-keyword">this</span>.connectionSettings = connectionSettings;<br>    configurationHdfs = <span class="hljs-keyword">new</span> Configuration(<span class="hljs-keyword">false</span>);<br>    ClassLoader pClassLoader=<span class="hljs-keyword">null</span>;<br>    <span class="hljs-keyword">try</span><br>    &#123;<br>        pClassLoader= Class.forName(com.fangyuzhong.intelliJ.hadoop.fsconnection.ConnectionManager.class.getName()).getClassLoader();<br>    &#125;<br>    <span class="hljs-keyword">catch</span> (Exception ex)<br>    &#123;<br>        LOGGER.error(<span class="hljs-string">&quot;获取当前类的加载器错误&quot;</span>,ex);<br>    &#125;<br>    <span class="hljs-keyword">if</span>(pClassLoader!=<span class="hljs-keyword">null</span>)<br>    &#123;<br>        String hdfsPath = connectionSettings.getFileSystemSettings().getHDFSUrl();<br>        String yarnResourceAMPath = connectionSettings.getFileSystemSettings().getMapReducelUrl();<br>        <span class="hljs-keyword">if</span>(!StringUtil.isEmptyOrSpaces(hdfsPath))<br>        &#123;<br>            <span class="hljs-comment">//设置HDFS的配置类加载器</span><br>            configurationHdfs.setClassLoader(pClassLoader);<br>            <span class="hljs-comment">//设置HDFS相关属性</span><br>            configurationHdfs.set(Constants.FS_HDFS_IMPL_KEY, Constants.FS_HDFS_IMPL_VALUE);<br>            configurationHdfs.set(Constants.FS_FILE_IMPL_KEY,Constants.FS_FILE_IMPL_VALUE);<br>            configurationHdfs.set(Constants.FS_DEFAULTFS_KEY, hdfsPath);<br>            configurationHdfs.set(Constants.YARN_RESOURCEMANAGER_SCHEDULER_ADDRESS,yarnResourceAMPath);<br>            <span class="hljs-comment">//通过配置初始化HDFS的FileSystem</span><br>            InitiFileSystem(configurationHdfs);<br>        &#125;<br>    &#125;<br>    <span class="hljs-keyword">try</span><br>    &#123;<br>        canConnection = createTestConnection();<br>    &#125;<br>    <span class="hljs-keyword">catch</span> (IOException ex)<br>    &#123;<br>        canConnection=<span class="hljs-keyword">false</span>;<br>        LOGGER.error(<span class="hljs-string">&quot;创建连接测试异常&quot;</span>,ex);<br>    &#125;<br>    connectionInfo = <span class="hljs-keyword">new</span> ConnectionInfo(connectionSettings);<br>    connectionStatus = <span class="hljs-keyword">new</span> ConnectionStatus();<br>    ref = <span class="hljs-keyword">new</span> ConnectionHandlerRef(<span class="hljs-keyword">this</span>);<br>    connectionStatus.setConnected(canConnection);<br>&#125;<br><br><span class="hljs-function"><span class="hljs-keyword">private</span>  <span class="hljs-keyword">void</span>  <span class="hljs-title">InitiFileSystem</span><span class="hljs-params">(Configuration configuration)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">try</span><br>    &#123;<br>        fileSystem = FileSystem.get(configuration);<br>    &#125;<br>    <span class="hljs-keyword">catch</span> (Exception ex)<br>    &#123;<br>        LOGGER.error(<span class="hljs-string">&quot;通过configuration获取HDFS系统对象异常&quot;</span>,ex);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">createTestConnection</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> IOException</span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">boolean</span> canConnection = <span class="hljs-keyword">false</span>;<br>    <span class="hljs-keyword">if</span> (fileSystem == <span class="hljs-keyword">null</span>)<br>    &#123;<br>        canConnection = <span class="hljs-keyword">false</span>;<br>    &#125;<br>    <span class="hljs-keyword">else</span><br>    &#123;<br>        canConnection = fileSystem.exists(<span class="hljs-keyword">new</span> Path(<span class="hljs-string">&quot;/&quot;</span>));<br>    &#125;<br>    <span class="hljs-keyword">return</span> canConnection;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>&emsp;&emsp;该类中还有个重要的方法：FileSystemObjectBundle getObjectBundle()，标示该连接到HDFS后，获取根目录下所有的对象，包括目录和文件对象</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> *获取连接对应的HDFS根目录下所有的对象集合 </span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">@Override</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> FileSystemObjectBundle <span class="hljs-title">getObjectBundle</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">if</span> (objectBundle == <span class="hljs-keyword">null</span>)<br>    &#123;<br>        objectBundle = <span class="hljs-keyword">new</span> FileSystemObjectBundleImpl(<span class="hljs-keyword">this</span>, connectionBundle);<br>    &#125;<br>    <span class="hljs-keyword">return</span> objectBundle;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>关于类FIleSystemObjectBundleImpl 将在后面介绍文件系统对象的时候介绍。</p>
+<h2 id="ConnectionBundle类，表示连接集合。"><a href="#ConnectionBundle类，表示连接集合。" class="headerlink" title="ConnectionBundle类，表示连接集合。"></a>ConnectionBundle类，表示连接集合。</h2><p>&emsp;&emsp;用户可以进行多个HDFS连接设置，这样就会产生多个连接Connection，那使用ConnectionBundle类来定义和处理这些连接。ConnectionBundle类继承FIleSystemBrowserTreeNodeBase，表示他也是个树节点，当用户选择以单个树多个根节点来展示的时候，ConnectionBundle就以节点的方式来展示。这里还要注意，实例化 ConnectionBundle的时候，默认加载一个虚拟的连接 virtualConnectons对象。相关代码片段如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">ConnectionBundle</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">this</span>.projectRef = <span class="hljs-keyword">new</span> ProjectRef(project);<br>    <span class="hljs-keyword">this</span>.virtualConnections.add(<span class="hljs-keyword">new</span> VirtualConnectionHandler(<span class="hljs-string">&quot;virtual-hdfs-fsconnection&quot;</span>,<br>          <span class="hljs-string">&quot;Virtual - hdfs 3.0&quot;</span>, FileSystemType.HDFS,<span class="hljs-number">3.0</span>, project));<br>&#125;<br><br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 添加连接到集合</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> connectionHandler</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">addConnection</span><span class="hljs-params">(ConnectionHandler connectionHandler)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">this</span>.connectionHandlers.add(connectionHandler);<br>    Disposer.register(<span class="hljs-keyword">this</span>, connectionHandler);<br>&#125;<br><br></code></pre></div></td></tr></table></figure>
+
+<h2 id="HDFS连接Connection的管理类-ConnectionManager。"><a href="#HDFS连接Connection的管理类-ConnectionManager。" class="headerlink" title="HDFS连接Connection的管理类 ConnectionManager。"></a>HDFS连接Connection的管理类 ConnectionManager。</h2><p>&emsp;&emsp;ConnectionManager属于Project级别插件,实现了抽象类AbstractProjectComponent，维护整个HDFS的连接管理，包括：连接配置修改后，重新构建UI对象更新Connection连接、获取连接的集合ConnectionBundle、测试HDFS连接、根据连接的ID获取ConnectionHandle 等等。相关代码片段如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 获取ConnectionManager对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ConnectionManager <span class="hljs-title">getInstance</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Project project)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">return</span> getComponent(project);<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> *获取ConnectionManager对象</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> ConnectionManager <span class="hljs-title">getComponent</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Project project)</span></span><br><span class="hljs-function"></span>&#123;<br><br>    <span class="hljs-keyword">return</span> FailsafeUtil.getComponent(project, ConnectionManager.class);<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">private</span> <span class="hljs-title">ConnectionManager</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">super</span>(project);<br>    <span class="hljs-keyword">this</span>.connectionBundle = ConnectionBundleSettings.getInstance(getProject()).getConnectionBundle()<br>    Disposer.register(<span class="hljs-keyword">this</span>, <span class="hljs-keyword">this</span>.connectionBundle);<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化加载</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initComponent</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">super</span>.initComponent();<br>    Project project = getProject();<br>    <span class="hljs-comment">//注册连接配置修改监听</span><br>    EventUtil.subscribe(project, <span class="hljs-keyword">this</span>, ConnectionSettingsListener.TOPIC, <span class="hljs-keyword">this</span>.connectionSettingsListener);<br>    <span class="hljs-keyword">this</span>.idleConnectionCleaner = <span class="hljs-keyword">new</span> Timer(<span class="hljs-string">&quot;HDFS - Idle Connection Cleaner [&quot;</span> + project.getName() + <span class="hljs-string">&quot;]&quot;</span>);<br>    <span class="hljs-keyword">this</span>.idleConnectionCleaner.schedule(<span class="hljs-keyword">new</span> CloseIdleConnectionTask(), TimeUtil.ONE_MINUTE, TimeUtil.ONE_MINUTE);<br>&#125;<br><span class="hljs-comment">/*</span><br><span class="hljs-comment">连接配置修改后处理</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">private</span> ConnectionSettingsListener connectionSettingsListener = <span class="hljs-keyword">new</span> ConnectionSettingsAdapter()<br>&#123;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">connectionChanged</span><span class="hljs-params">(String connectionId)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">final</span> ConnectionHandler connectionHandler = getConnectionHandler(connectionId);<br>        connectionHandler.getObjectBundle().refreshTreeChildren();<br>    &#125;<br>&#125;;<br></code></pre></div></td></tr></table></figure>
+
+<h2 id="HDFS连接connection缓存类-ConnectionCache"><a href="#HDFS连接connection缓存类-ConnectionCache" class="headerlink" title="HDFS连接connection缓存类 ConnectionCache"></a>HDFS连接connection缓存类 ConnectionCache</h2><p>&emsp;&emsp;ConnectionCache，缓存类，使用HashMap 以连接的ID为Key，对应的连接ConfigurationHandler为Value进行存储。该类是Application级别的插件，IDEA启动时进行初始化。该类中提供按照连接的ID查找连接ConnectionHandler。初始化时注册了Project生命周期的相关事件处理。代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br><span class="line">95</span><br><span class="line">96</span><br><span class="line">97</span><br><span class="line">98</span><br><span class="line">99</span><br><span class="line">100</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义HDFS连接的缓存类，Application级别插件，IDEA系统启动进行初始化</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-7-15.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">ConnectionCache</span></span><br><span class="hljs-class">        <span class="hljs-keyword">implements</span> <span class="hljs-title">ApplicationComponent</span></span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-comment">/*</span><br><span class="hljs-comment">     使用HashMap 来存储Connection的缓存</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> <span class="hljs-keyword">static</span> Map&lt;String, ConnectionHandler&gt; CACHE = <span class="hljs-keyword">new</span> THashMap();<br><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 根据connection的ID查找ConnectionHandler</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> connectionId</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Nullable</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> ConnectionHandler <span class="hljs-title">findConnectionHandler</span><span class="hljs-params">(String connectionId)</span></span><br><span class="hljs-function">    </span>&#123;<br>        ConnectionHandler connectionHandler =  CACHE.get(connectionId);<br>        ProjectManager projectManager = ProjectManager.getInstance();<br>        <span class="hljs-keyword">if</span> ((connectionHandler == <span class="hljs-keyword">null</span>) &amp;&amp; (projectManager != <span class="hljs-keyword">null</span>))<br>        &#123;<br>            <span class="hljs-keyword">synchronized</span> (ConnectionCache.class)<br>            &#123;<br>                connectionHandler = CACHE.get(connectionId);<br>                <span class="hljs-keyword">if</span> (connectionHandler == <span class="hljs-keyword">null</span>)<br>                &#123;<br>                    <span class="hljs-keyword">for</span> (Project project : projectManager.getOpenProjects())<br>                    &#123;<br>                        ConnectionManager connectionManager = ConnectionManager.getInstance(project);<br>                        connectionHandler = connectionManager.getConnectionHandler(connectionId);<br>                        <span class="hljs-keyword">if</span> ((connectionHandler != <span class="hljs-keyword">null</span>) &amp;&amp; (!connectionHandler.isDisposed()))<br>                        &#123;<br>                            CACHE.put(connectionId, connectionHandler);<br>                            <span class="hljs-keyword">return</span> connectionHandler;<br>                        &#125;<br>                    &#125;<br>                &#125;<br>            &#125;<br>        &#125;<br>        <span class="hljs-keyword">return</span> (connectionHandler == <span class="hljs-keyword">null</span>) || (connectionHandler.isDisposed()) ? <span class="hljs-keyword">null</span> : connectionHandler;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 初始化插件组件</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">initComponent</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-comment">//注册项目生命周期通知</span><br>        EventUtil.subscribe(<span class="hljs-keyword">null</span>, ProjectLifecycleListener.TOPIC, <span class="hljs-keyword">this</span>.projectLifecycleListener);<br>    &#125;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">disposeComponent</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>    &#125;<br>    <span class="hljs-meta">@NotNull</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getComponentName</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span>  <span class="hljs-string">&quot;HadoopNavigator.ConnectionCache&quot;</span>;<br><br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 定义工程项目的生命周期处理事件类</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-keyword">private</span> ProjectLifecycleListener projectLifecycleListener = <span class="hljs-keyword">new</span> ProjectLifecycleListener.Adapter()<br>    &#123;<br>        <span class="hljs-comment">/**</span><br><span class="hljs-comment">         * 工程Project组件初始化后处理</span><br><span class="hljs-comment">         * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment">         */</span><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">projectComponentsInitialized</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Project project)</span></span><br><span class="hljs-function">        </span>&#123;<br>            ConnectionManager connectionManager = ConnectionManager.getInstance(project);<br>            <span class="hljs-keyword">if</span> (connectionManager == <span class="hljs-keyword">null</span>) <span class="hljs-keyword">return</span>;<br>            List&lt;ConnectionHandler&gt; connectionHandlers = connectionManager.getConnectionHandlers();<br>            <span class="hljs-keyword">for</span> (ConnectionHandler connectionHandler : connectionHandlers)<br>            &#123;<br>                ConnectionCache.CACHE.put(connectionHandler.getId(), connectionHandler);<br>            &#125;<br>        &#125;<br><br>        <span class="hljs-comment">/**</span><br><span class="hljs-comment">         * 关闭工程Project后处理</span><br><span class="hljs-comment">         * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment">         */</span><br>        <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">afterProjectClosed</span><span class="hljs-params">(<span class="hljs-meta">@NotNull</span> Project project)</span></span><br><span class="hljs-function">        </span>&#123;<br>            Iterator&lt;String&gt; connectionIds = ConnectionCache.CACHE.keySet().iterator();<br>            <span class="hljs-keyword">while</span> (connectionIds.hasNext())<br>            &#123;<br>                String connectionId = (String) connectionIds.next();<br>                ConnectionHandler connectionHandler = (ConnectionHandler) ConnectionCache.CACHE.get(connectionId);<br>                <span class="hljs-keyword">if</span> ((connectionHandler.isDisposed()) || (connectionHandler.getProject() == project))<br>                &#123;<br>                    connectionIds.remove();<br>                &#125;<br>            &#125;<br>        &#125;<br>    &#125;;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Hadoop/">Hadoop</a>
+                    
+                      <a class="hover-with-bg" href="/tags/IDEA/">IDEA</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2017/08/01/IntellijPluginHadoop/007-IntellijPluginHadoop/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件HDFS文件系统对象的设计与实现</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2017/07/30/IntellijPluginHadoop/005-IntellijPluginHadoop/">
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现3</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+            <hr>
+            
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+		   坚持技术分享，你的支持将鼓励我继续创作！
+        </span>
+		<input type="button" id="btn_donate" style="background-color: red; color: white; border: none; height=35; width=80" value="打赏"/>
+        <br>
+      </div>  
+	<div id="donate_guide" class="donate_bar center" style="display: none">
+		<!-- 支付宝打赏图案 -->
+		<img src="/img/zhifubao.JPG" srcset="/img/loading.gif" lazyload alt="支付宝打赏"> 
+		<!-- 微信打赏图案 -->
+		<img src="/img/wechatpay.jpg" srcset="/img/loading.gif" lazyload alt="微信打赏">  
+    </div>
+	<script type="text/javascript">
+		document.getElementById('btn_donate').onclick = function(){
+			var qr=document.getElementById("donate_guide");
+			"none"===qr.style.display?qr.style.display="block":qr.style.display="none"
+		}
+	</script>
+</div>
+            
+            
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js', function () {
+        var gitalk = new Gitalk({
+          clientID: 'c670ef2bb24287e88e04',
+          clientSecret: 'e48c715a6abaad0526c7a9e5213a85b23760a705',
+          repo: 'fangyuzhong2016.github.io',
+          owner: 'fangyuzhong2016',
+          admin: ["fangyuzhong2016"],
+          id: '5747097c8d9a786a39270d897fcfc225',
+          language: 'zh-CN',
+          labels: ["Gitalk"],
+          perPage: 10,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false,
+          proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token'
+        });
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>博客使用Hexo搭建</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>博客风格模板Fluid</span></a> <div> <span id="timeDate">载入天数...</span> <span id="times">载入时分秒...</span> <script src="/js/duration.js"></script> </div> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?e050beeb708f14713adb2b820c6c5ee3";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

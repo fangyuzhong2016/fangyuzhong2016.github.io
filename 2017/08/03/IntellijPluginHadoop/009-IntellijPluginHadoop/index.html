@@ -1,0 +1,613 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/globe.ico">
+  <link rel="icon" href="/img/globe.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="本节具体分析一下插件配置中各个具体的配置项设计和实现，包括HDFS连接配置设置、插件系统一般配置中国际化语言支持和浏览器树展现方式配置。">
+  <meta name="author" content="fyz">
+  <meta name="keywords" content="">
+  
+  <title>HadoopIntellijPlugin插件文件系统配置设计和实现2 | 扫地老僧</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/github-markdown-css@4.0.0/github-markdown.min.css" />
+  <link  rel="stylesheet" href="/lib/hint/hint.min.css" />
+
+  
+    
+    
+      
+      <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@10.6.0/styles/github-gist.min.css" />
+    
+  
+
+  
+    <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.css" />
+  
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":true},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"e050beeb708f14713adb2b820c6c5ee3","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 40vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>扫地老僧 - 专注GIS、大数据和AI人工智能领域</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/personalworks/">
+                <i class="iconfont icon-map"></i>
+                个人作品
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/banner_img.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.3)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="HadoopIntellijPlugin插件文件系统配置设计和实现2">
+              
+            </span>
+
+            
+              <div class="mt-3">
+  
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-author" aria-hidden="true"></i>
+      fyz
+    </span>
+  
+  
+    <span class="post-meta">
+      <i class="iconfont icon-date-fill" aria-hidden="true"></i>
+      <time datetime="2017-08-03 16:17" pubdate>
+        2017年8月3日 下午
+      </time>
+    </span>
+  
+</div>
+
+<div class="mt-1">
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-chart"></i>
+      1.8k 字
+    </span>
+  
+
+  
+    
+    <span class="post-meta mr-2">
+      <i class="iconfont icon-clock-fill"></i>
+      
+      
+      26
+       分钟
+    </span>
+  
+
+  
+  
+    
+      <!-- 不蒜子统计文章PV -->
+      <span id="busuanzi_container_page_pv" style="display: none">
+        <i class="iconfont icon-eye" aria-hidden="true"></i>
+        <span id="busuanzi_value_page_pv"></span> 次
+      </span>
+    
+  
+</div>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      
+
+<div class="container-fluid nopadding-x">
+  <div class="row nomargin-x">
+    <div class="d-none d-lg-block col-lg-2"></div>
+    <div class="col-lg-8 nopadding-x-md">
+      <div class="container nopadding-x-md" id="board-ctn">
+        <div class="py-5" id="board">
+          <article class="post-content mx-auto">
+            <!-- SEO header -->
+            <h1 style="display: none">HadoopIntellijPlugin插件文件系统配置设计和实现2</h1>
+            
+            <div class="markdown-body">
+              <p>&emsp;&emsp;本节具体分析一下插件配置中各个具体的配置项设计和实现，包括HDFS连接配置设置、插件系统一般配置中国际化语言支持和浏览器树展现方式配置。</p>
+<h2 id="插件配置起点ProjectSetting"><a href="#插件配置起点ProjectSetting" class="headerlink" title="插件配置起点ProjectSetting"></a>插件配置起点ProjectSetting</h2><p>&emsp;&emsp;插件的配置项是以Intellij 工程Project为起点，在IDEA启动加载工程后，初始化并读取配置。工程配置设计整体类图：<br><img src="1.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="工程配置设置ProjectSetting和配置管理ProjectSettingManager"><a href="#工程配置设置ProjectSetting和配置管理ProjectSettingManager" class="headerlink" title="工程配置设置ProjectSetting和配置管理ProjectSettingManager"></a>工程配置设置ProjectSetting和配置管理ProjectSettingManager</h3><p>&emsp;&emsp;ProjectSetting由HDFS配置和插件通用配置组成，继承配置集合泛型类CompositeProjectConfiguration。ProjectSettingManager是配置管理类，负责初始化整个配置，是Project级别的插件组件，当加载工程时初始化该类。当加载工程的时候，在初始化插件组件方法initComponent()中调用importDefaultSettings() 方法，判断当前工程文件是否有该插件工程的配置文件，没有，那就创建默认的配置，配置文件名称：hdfsnavigator.xml重写loadState()方法，读取各个配置项，核心代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 导入新的配置</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> isNewProject</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">importDefaultSettings</span><span class="hljs-params">(<span class="hljs-keyword">final</span> <span class="hljs-keyword">boolean</span> isNewProject)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">final</span> Project project = getProject();<br>    Boolean settingsLoaded = project.getUserData(FileSystemDataKeys.PROJECT_SETTINGS_LOADED_KEY);<br>    <span class="hljs-keyword">if</span> ((settingsLoaded == <span class="hljs-keyword">null</span>) || (!settingsLoaded.booleanValue()) || (!isNewProject))<br>    &#123;<br>        String message = LocaleLanguageManager.getInstance().getResourceBundle().getString(LanguageKeyWord.IMPORTDEFAULTSETTINGSASKINFORMATION) +<br>                project.getName() + <span class="hljs-string">&quot;\&quot;?&quot;</span>;<br>        String strYes=LocaleLanguageManager.getInstance().getResourceBundle().getString(LanguageKeyWord.ASKYES);<br>        String strNo=LocaleLanguageManager.getInstance().getResourceBundle().getString(LanguageKeyWord.ASKNO);<br>        MessageUtil.showQuestionDialog(project, LocaleLanguageManager.getInstance().getResourceBundle().getString(LanguageKeyWord.IMPORTDEFAULTSETTINGSASKTITLE),<br>                message, <span class="hljs-keyword">new</span> String[]&#123;strYes, strNo&#125;, <span class="hljs-number">0</span>, <span class="hljs-keyword">new</span> MessageCallback(Integer.valueOf(<span class="hljs-number">0</span>))<br>        &#123;<br>            <span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">execute</span><span class="hljs-params">()</span></span><br><span class="hljs-function">            </span>&#123;<br>                <span class="hljs-keyword">try</span><br>                &#123;<br>                    Element element = <span class="hljs-keyword">new</span> Element(<span class="hljs-string">&quot;state&quot;</span>);<br>                    ProjectSettings defaultProjectSettings = DefaultProjectSettingsManager.getInstance().<br>                            getDefaultProjectSettings();<br>                    defaultProjectSettings.writeConfiguration(element);<br>                    ConnectionBundleSettings.IS_IMPORT_EXPORT_ACTION.set(<span class="hljs-keyword">true</span>);<br>                    getProjectSettings().readConfiguration(element);<br><br>                    (EventUtil.notify(project, ConnectionSettingsListener.TOPIC)).connectionsChanged();<br>                    <span class="hljs-keyword">if</span> (!isNewProject)<br>                    &#123;<br>                        MessageUtil.showInfoDialog(project, <span class="hljs-string">&quot;Project Settings&quot;</span>,<br>                                <span class="hljs-string">&quot;Default project settings loaded to project \&quot;&quot;</span> + project.getName() + <span class="hljs-string">&quot;\&quot;.&quot;</span>);<br>                    &#125;<br>                &#125; <span class="hljs-keyword">finally</span><br>                &#123;<br>                    ConnectionBundleSettings.IS_IMPORT_EXPORT_ACTION.set(<span class="hljs-keyword">false</span>);<br>                &#125;<br><br>            &#125;<br>        &#125;);<br>    &#125;<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 读取并解析配置</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment"> */</span><br><span class="hljs-meta">@Override</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">loadState</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function"></span>&#123;<br>    projectSettings.readConfiguration(element);<br>    getProject().putUserData(FileSystemDataKeys.PROJECT_SETTINGS_LOADED_KEY, <span class="hljs-keyword">true</span>);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h3 id="HDFS文件系统浏览器通用配置GeneraProjectSetting和UI-GeneralProjectSettingsFrom"><a href="#HDFS文件系统浏览器通用配置GeneraProjectSetting和UI-GeneralProjectSettingsFrom" class="headerlink" title="HDFS文件系统浏览器通用配置GeneraProjectSetting和UI GeneralProjectSettingsFrom"></a>HDFS文件系统浏览器通用配置GeneraProjectSetting和UI GeneralProjectSettingsFrom</h3><p>&emsp;&emsp;这里定义了通用配置的UI界面，和操作管理类，具体的设置分为国际化语言配置和树展现方式，由具体的类和UI去实现。GeneraProjectSetting 通用配置管理类，主要获取语言配置和树展现方式配置，核心代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">GeneralProjectSettings</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">super</span>(project);<br>    <span class="hljs-comment">//区域语言设置</span><br>    regionalSettings = <span class="hljs-keyword">new</span> RegionalSettings();<br>    regionalSettings.setProject(project);<br>    <span class="hljs-comment">//HDFS文件系统浏览器树展现方式设置</span><br>    browserSettings = <span class="hljs-keyword">new</span> BrowserSettings();<br>    browserSettings.setProject(project);<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 获取语言设置配置</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> RegionalSettings <span class="hljs-title">getRegionalSettings</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">return</span> regionalSettings;<br>&#125;<br><br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 获取HDFS浏览器树展现方式配置</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> BrowserSettings <span class="hljs-title">getBrowserSettings</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">return</span> browserSettings;<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 创建通用配置编辑UI</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> GeneralProjectSettingsForm <span class="hljs-title">createConfigurationEditor</span><span class="hljs-params">()</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> GeneralProjectSettingsForm(<span class="hljs-keyword">this</span>);<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 获取通用配置集合</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">protected</span> Configuration[] createConfigurations()<br>&#123;<br>    <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> Configuration[]&#123;regionalSettings,browserSettings&#125;;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<p>&emsp;&emsp;GeneralProjectSettingsForm 通用配置的UI，比较简单，使用两个Panel，保存语言配置和树的展现方式配置。</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 初始化通用配置UI</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> generalSettings</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-title">GeneralProjectSettingsForm</span><span class="hljs-params">(GeneralProjectSettings generalSettings)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">super</span>(generalSettings);<br>    resetFormChanges();<br>    registerComponent(mainPanel);<br>    localeSettingsPanel.add(generalSettings.getRegionalSettings().createComponent(), BorderLayout.CENTER);<br>    browsersettingPanel.add(generalSettings.getBrowserSettings().createComponent(), BorderLayout.CENTER);<br>&#125;<br></code></pre></div></td></tr></table></figure>
+<h2 id="HDFS连接connection配置"><a href="#HDFS连接connection配置" class="headerlink" title="HDFS连接connection配置"></a>HDFS连接connection配置</h2><p>HDFS连接Connection配置设计类图如下：<br><img src="2.png" srcset="/img/loading.gif" lazyload></p>
+<h3 id="相关连接配置类讲解"><a href="#相关连接配置类讲解" class="headerlink" title="相关连接配置类讲解"></a>相关连接配置类讲解</h3><p>连接配置管理类ConnectionSetting<br>HDFS连接配置类ConnectionFileSystemSettings<br>HDFS连接集合配置类ConnectionBundleSettings<br>ConnectionSettings 是HDFS连接配置的管理类，获取ConnFileSystemSettings 和ConnectionBundleSettings<br>ConnectionFileSystemSettings抽象类为HDFS连接设置类，包括设置HDFS的Host、端口；MR的Host和端口；HDFS连接的用户等等。<br>ConnectionBundleSettings抽象类是配置的集合类，增加、删除一个配置等等<br>ConnectionFileSystemSettings类继承Configuration泛型类，实现了readConfiguration和witreConfiguartion  </p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 读取配置并解析</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">readConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function"></span>&#123;<br>    String connectionId = getString(element, <span class="hljs-string">&quot;id&quot;</span>, <span class="hljs-keyword">null</span>);<br>    <span class="hljs-keyword">if</span> (connectionId != <span class="hljs-keyword">null</span>)<br>    &#123;<br>        parent.setConnectionId(connectionId);<br>    &#125;<br>    name = getString(element, <span class="hljs-string">&quot;name&quot;</span>, name);<br>    description = getString(element, <span class="hljs-string">&quot;description&quot;</span>, description);<br>    fileSystemType = FileSystemType.get(getString(element, <span class="hljs-string">&quot;database-type&quot;</span>, fileSystemType.getName()));<br>    databaseVersion = getDouble(element, <span class="hljs-string">&quot;database-version&quot;</span>, databaseVersion);<br>    user = getString(element, <span class="hljs-string">&quot;user&quot;</span>, user);<br>    <span class="hljs-keyword">if</span>(StringUtil.isEmptyOrSpaces(user))<br>    &#123;<br>        user=System.getProperty(<span class="hljs-string">&quot;user.name&quot;</span>);<br>    &#125;<br>    password = decodePassword(getString(element, <span class="hljs-string">&quot;password&quot;</span>, password));<br>    active = getBoolean(element, <span class="hljs-string">&quot;active&quot;</span>, active);<br>    osAuthentication = getBoolean(element, <span class="hljs-string">&quot;os-authentication&quot;</span>, osAuthentication);<br>    updateHashCode();<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 将设置的配置项写入XML</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">writeConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function"></span>&#123;<br>    setString(element, <span class="hljs-string">&quot;name&quot;</span>, nvl(name));<br>    setString(element, <span class="hljs-string">&quot;description&quot;</span>, nvl(description));<br>    setBoolean(element, <span class="hljs-string">&quot;active&quot;</span>, active);<br>    setBoolean(element, <span class="hljs-string">&quot;os-authentication&quot;</span>, osAuthentication);<br>    setString(element, <span class="hljs-string">&quot;database-type&quot;</span>, nvl(fileSystemType == <span class="hljs-keyword">null</span> ? FileSystemType.UNKNOWN.getName() : fileSystemType.getName()));<br>    setDouble(element, <span class="hljs-string">&quot;database-version&quot;</span>, databaseVersion);<br>    setString(element, <span class="hljs-string">&quot;user&quot;</span>, nvl(user));<br>    setString(element, <span class="hljs-string">&quot;password&quot;</span>, encodePassword(password));<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<p>&emsp;&emsp;ConnectionBundleSettings HDFS 连接集合类，继承ProjectConfiguration泛型类，并且也实现了readConfiguartion 和WriteConfiguration</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 读取配置并解析</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">readConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">if</span> (IS_IMPORT_EXPORT_ACTION.get())<br>    &#123;<br>        Project project = getProject();<br>        List&lt;ConnectionHandler&gt; connectionHandlers = connectionBundle.getAllConnectionHandlers();<br>        ConnectionManager.getInstance(project).disposeConnections(connectionHandlers);<br>    &#125;<br>    <span class="hljs-keyword">for</span> (Object o : element.getChildren())<br>    &#123;<br>        Element connectionElement = (Element) o;<br>        String connectionId = connectionElement.getAttributeValue(<span class="hljs-string">&quot;id&quot;</span>);<br>        ConnectionHandler connectionHandler = <span class="hljs-keyword">null</span>;<br>        <span class="hljs-keyword">if</span> (connectionId != <span class="hljs-keyword">null</span>)<br>        &#123;<br>            connectionHandler = connectionBundle.getConnection(connectionId);<br>        &#125;<br>        <span class="hljs-keyword">if</span> (connectionHandler == <span class="hljs-keyword">null</span>)<br>        &#123;<br>            <span class="hljs-comment">//创建一个ConnectionHandler</span><br>            ConnectionSettings connectionSettings = <span class="hljs-keyword">new</span> ConnectionSettings(<span class="hljs-keyword">this</span>);<br>            connectionSettings.readConfiguration(connectionElement);<br>            connectionHandler = <span class="hljs-keyword">new</span> ConnectionHandlerImpl(connectionBundle, connectionSettings);<br>            connectionBundle.addConnection(connectionHandler);<br>        &#125; <span class="hljs-keyword">else</span><br>        &#123;<br>            ConnectionSettings connectionSettings = connectionHandler.getSettings();<br>            connectionSettings.readConfiguration(connectionElement);<br>        &#125;<br>    &#125;<br>&#125;<br><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 写入配置XML</span><br><span class="hljs-comment"> * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment"> */</span><br><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">writeConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function"></span>&#123;<br>    <span class="hljs-keyword">for</span> (ConnectionHandler connectionHandler : connectionBundle.getConnectionHandlers().getFullList())<br>    &#123;<br>        Element connectionElement = <span class="hljs-keyword">new</span> Element(<span class="hljs-string">&quot;fsconnection&quot;</span>);<br>        ConnectionSettings connectionSettings = connectionHandler.getSettings();<br>        connectionSettings.writeConfiguration(connectionElement);<br>        element.addContent(connectionElement);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="界面配置的UI类"><a href="#界面配置的UI类" class="headerlink" title="界面配置的UI类"></a>界面配置的UI类</h3><p>配置的UI类主要包括 ConnectionSettingForm、ConnectionBundleSettingsForm、GeneralFileSystemSettingsForm<br>ConnectionSettingForm HDFS连接配置的主界面UI，使用Tab列表的方式展示需要设置的连接配置<br>ConnectionBundleSettingsForm 连接集合主界面UI，创建一个连接，就添加到UI集合中显示，可以设置多个HDFS连接<br>GeneralFileSystemSettingsForm，每个连接的具体设置，包括HDFS的主机地址和端口、MR的地址和端口、访问HDFS的用户名称<br>这里就不再贴代码了。  </p>
+<h2 id="国际化多语言和文件浏览器树展现方式设置"><a href="#国际化多语言和文件浏览器树展现方式设置" class="headerlink" title="国际化多语言和文件浏览器树展现方式设置"></a>国际化多语言和文件浏览器树展现方式设置</h2><h3 id="国际化多语言设置配置-RegionSettings和RegionalSettingEditorForm"><a href="#国际化多语言设置配置-RegionSettings和RegionalSettingEditorForm" class="headerlink" title="国际化多语言设置配置 RegionSettings和RegionalSettingEditorForm"></a>国际化多语言设置配置 RegionSettings和RegionalSettingEditorForm</h3><p>&emsp;&emsp;RegionSettings 语言设置管理类，获取设置的当前UI的语言。RegionalSettingEditorForm 语言设置的UI，很简单，界面上只有一个下拉列表，选中UI需要展示的语言。<br>RegionSettings类的代码如下：</p>
+<figure class="highlight java"><table><tr><td class="gutter hljs"><div class="hljs code-wrapper"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br><span class="line">46</span><br><span class="line">47</span><br><span class="line">48</span><br><span class="line">49</span><br><span class="line">50</span><br><span class="line">51</span><br><span class="line">52</span><br><span class="line">53</span><br><span class="line">54</span><br><span class="line">55</span><br><span class="line">56</span><br><span class="line">57</span><br><span class="line">58</span><br><span class="line">59</span><br><span class="line">60</span><br><span class="line">61</span><br><span class="line">62</span><br><span class="line">63</span><br><span class="line">64</span><br><span class="line">65</span><br><span class="line">66</span><br><span class="line">67</span><br><span class="line">68</span><br><span class="line">69</span><br><span class="line">70</span><br><span class="line">71</span><br><span class="line">72</span><br><span class="line">73</span><br><span class="line">74</span><br><span class="line">75</span><br><span class="line">76</span><br><span class="line">77</span><br><span class="line">78</span><br><span class="line">79</span><br><span class="line">80</span><br><span class="line">81</span><br><span class="line">82</span><br><span class="line">83</span><br><span class="line">84</span><br><span class="line">85</span><br><span class="line">86</span><br><span class="line">87</span><br><span class="line">88</span><br><span class="line">89</span><br><span class="line">90</span><br><span class="line">91</span><br><span class="line">92</span><br><span class="line">93</span><br><span class="line">94</span><br></pre></div></td><td class="code"><div class="hljs code-wrapper"><pre><code class="hljs java"><span class="hljs-comment">/**</span><br><span class="hljs-comment"> * 定义国际化语言设置类</span><br><span class="hljs-comment"> * Created by fangyuzhong on 17-8-1.</span><br><span class="hljs-comment"> */</span><br><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RegionalSettings</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Configuration</span>&lt;<span class="hljs-title">RegionalSettingsEditorForm</span>&gt;</span><br><span class="hljs-class"></span>&#123;<br>    <span class="hljs-keyword">private</span> Locale locale = Locale.getDefault();<br>    <span class="hljs-keyword">private</span> Project project=<span class="hljs-keyword">null</span>;<br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setProject</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.project = project;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取国际化语言配置实例对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> project</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">static</span> RegionalSettings <span class="hljs-title">getInstance</span><span class="hljs-params">(Project project)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> GeneralProjectSettings.getInstance(project).getRegionalSettings();<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 应用</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@throws</span> ConfigurationException</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">apply</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> ConfigurationException</span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">super</span>.apply();<br><br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 获取当前配置的语言对象</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> Locale <span class="hljs-title">getLocale</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> locale;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 设置当前国际化语言</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> locale</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">setLocale</span><span class="hljs-params">(Locale locale)</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">this</span>.locale = locale;<br>    &#125;<br>    <span class="hljs-comment">/*********************************************************</span><br><span class="hljs-comment">     *                      Configuration                    *</span><br><span class="hljs-comment">     *********************************************************/</span><br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 实例化国际化设置UI</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@return</span></span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> RegionalSettingsEditorForm <span class="hljs-title">createConfigurationEditor</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-keyword">new</span> RegionalSettingsEditorForm(<span class="hljs-keyword">this</span>);<br>    &#125;<br>    <span class="hljs-meta">@Override</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> String <span class="hljs-title">getConfigElementName</span><span class="hljs-params">()</span></span><br><span class="hljs-function">    </span>&#123;<br>        <span class="hljs-keyword">return</span> <span class="hljs-string">&quot;regional-settings&quot;</span>;<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 读取配置，获取当前设置的国际化语言</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">readConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function">    </span>&#123;<br>        String localeString = SettingsUtil.getString(element, <span class="hljs-string">&quot;locale&quot;</span>, Locale.getDefault().toString());<br>        <span class="hljs-keyword">boolean</span> useSystemLocale = localeString.equals(<span class="hljs-string">&quot;SYSTEM_DEFAULT&quot;</span>);<br>        <span class="hljs-keyword">if</span> (useSystemLocale)<br>        &#123;<br>            <span class="hljs-keyword">this</span>.locale = Locale.getDefault();<br>        &#125; <span class="hljs-keyword">else</span><br>        &#123;<br>           <span class="hljs-keyword">this</span>.locale = LocaleOption.getLocalOption(localeString).getLocale();<br>        &#125;<br>        LocaleLanguageManager.getInstance().setResourceBundle(locale);<br>    &#125;<br>    <span class="hljs-comment">/**</span><br><span class="hljs-comment">     * 将当前的国际化配置写入配置文件</span><br><span class="hljs-comment">     * <span class="hljs-doctag">@param</span> element</span><br><span class="hljs-comment">     */</span><br>    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">writeConfiguration</span><span class="hljs-params">(Element element)</span></span><br><span class="hljs-function">    </span>&#123;<br>        String localLanguage =<span class="hljs-string">&quot;SYSTEM_DEFAULT&quot;</span>;<br>        <span class="hljs-keyword">if</span>(locale!=<span class="hljs-keyword">null</span>)<br>        &#123;<br>            localLanguage = locale.getLanguage()+<span class="hljs-string">&quot;-&quot;</span>+locale.getCountry();<br>        &#125;<br>        SettingsUtil.setString(element, <span class="hljs-string">&quot;locale&quot;</span>, localLanguage);<br>    &#125;<br>&#125;<br></code></pre></div></td></tr></table></figure>
+
+<h3 id="HDFS文件系统浏览器树的展现方式设置"><a href="#HDFS文件系统浏览器树的展现方式设置" class="headerlink" title="HDFS文件系统浏览器树的展现方式设置"></a>HDFS文件系统浏览器树的展现方式设置</h3><p>&emsp;&emsp;HDFS文件系统浏览器树有两种展现方式可设置，一是以单棵树多根节点展现多个连接，另一个是以Tab列表方式展现多个连接，两种方式界面比较：</p>
+<p><img src="3.png" srcset="/img/loading.gif" lazyload>   <img src="4.png" srcset="/img/loading.gif" lazyload>    <img src="5.png" srcset="/img/loading.gif" lazyload></p>
+<p>&emsp;&emsp;BrowserSettings 树展现方式管理类，获取配置设置的展现方式对象BrowserDisplayMode;BrowserSettingEditorFrom ，设置展示方式的UI。两个类都比较简单，这里就不再说了。</p>
+
+            </div>
+            <hr>
+            <div>
+              <div class="post-metas mb-3">
+                
+                  <div class="post-meta mr-3">
+                    <i class="iconfont icon-category"></i>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+                    
+                      <a class="hover-with-bg" href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+                    
+                  </div>
+                
+                
+                  <div class="post-meta">
+                    <i class="iconfont icon-tags"></i>
+                    
+                      <a class="hover-with-bg" href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+                    
+                      <a class="hover-with-bg" href="/tags/Hadoop/">Hadoop</a>
+                    
+                      <a class="hover-with-bg" href="/tags/IDEA/">IDEA</a>
+                    
+                  </div>
+                
+              </div>
+              
+                <p class="note note-warning">
+                  
+                    本博客所有文章除特别声明外，均采用 <a target="_blank" href="https://creativecommons.org/licenses/by-sa/4.0/deed.zh" rel="nofollow noopener noopener">CC BY-SA 4.0 协议</a> ，转载请注明出处！
+                  
+                </p>
+              
+              
+                <div class="post-prevnext">
+                  <article class="post-prev col-6">
+                    
+                    
+                      <a href="/2017/08/04/IntellijPluginHadoop/010-IntellijPluginHadoop/">
+                        <i class="iconfont icon-arrowleft"></i>
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件国际化多语言支持设计和实现</span>
+                        <span class="visible-mobile">上一篇</span>
+                      </a>
+                    
+                  </article>
+                  <article class="post-next col-6">
+                    
+                    
+                      <a href="/2017/08/02/IntellijPluginHadoop/008-IntellijPluginHadoop/">
+                        <span class="hidden-mobile">HadoopIntellijPlugin插件文件系统配置设计和实现1</span>
+                        <span class="visible-mobile">下一篇</span>
+                        <i class="iconfont icon-arrowright"></i>
+                      </a>
+                    
+                  </article>
+                </div>
+              
+            </div>
+            <hr>
+            
+              <div class ="post-donate">
+    <div id="donate_board" class="donate_bar center">
+        <span class="donate_txt">
+		   坚持技术分享，你的支持将鼓励我继续创作！
+        </span>
+		<input type="button" id="btn_donate" style="background-color: red; color: white; border: none; height=35; width=80" value="打赏"/>
+        <br>
+      </div>  
+	<div id="donate_guide" class="donate_bar center" style="display: none">
+		<!-- 支付宝打赏图案 -->
+		<img src="/img/zhifubao.JPG" srcset="/img/loading.gif" lazyload alt="支付宝打赏"> 
+		<!-- 微信打赏图案 -->
+		<img src="/img/wechatpay.jpg" srcset="/img/loading.gif" lazyload alt="微信打赏">  
+    </div>
+	<script type="text/javascript">
+		document.getElementById('btn_donate').onclick = function(){
+			var qr=document.getElementById("donate_guide");
+			"none"===qr.style.display?qr.style.display="block":qr.style.display="none"
+		}
+	</script>
+</div>
+            
+            
+            
+              <!-- Comments -->
+              <article class="comments" id="comments" lazyload>
+                
+                  
+                
+                
+  <div id="gitalk-container"></div>
+  <script type="text/javascript">
+    Fluid.utils.loadComments('#gitalk-container', function() {
+      Fluid.utils.createCssLink('/css/gitalk.css')
+      Fluid.utils.createScript('https://cdn.jsdelivr.net/npm/gitalk@1.7.2/dist/gitalk.min.js', function () {
+        var gitalk = new Gitalk({
+          clientID: 'c670ef2bb24287e88e04',
+          clientSecret: 'e48c715a6abaad0526c7a9e5213a85b23760a705',
+          repo: 'fangyuzhong2016.github.io',
+          owner: 'fangyuzhong2016',
+          admin: ["fangyuzhong2016"],
+          id: '32becb13f45e26a6d827d23ac4557f03',
+          language: 'zh-CN',
+          labels: ["Gitalk"],
+          perPage: 10,
+          pagerDirection: 'last',
+          createIssueManually: true,
+          distractionFreeMode: false,
+          proxy: 'https://cors-anywhere.azm.workers.dev/https://github.com/login/oauth/access_token'
+        });
+        gitalk.render('gitalk-container');
+      });
+    });
+  </script>
+  <noscript>Please enable JavaScript to view the comments</noscript>
+
+
+              </article>
+            
+          </article>
+        </div>
+      </div>
+    </div>
+    
+      <div class="d-none d-lg-block col-lg-2 toc-container" id="toc-ctn">
+        <div id="toc">
+  <p class="toc-header"><i class="iconfont icon-list"></i>&nbsp;目录</p>
+  <div class="toc-body" id="toc-body"></div>
+</div>
+
+      </div>
+    
+  </div>
+</div>
+
+<!-- Custom -->
+
+
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>博客使用Hexo搭建</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>博客风格模板Fluid</span></a> <div> <span id="timeDate">载入天数...</span> <span id="times">载入时分秒...</span> <script src="/js/duration.js"></script> </div> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/tocbot@4.12.2/dist/tocbot.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.5.7/dist/jquery.fancybox.min.js" ></script>
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/anchor-js@4.3.0/anchor.min.js" ></script>
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?e050beeb708f14713adb2b820c6c5ee3";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>

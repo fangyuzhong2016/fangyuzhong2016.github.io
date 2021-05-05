@@ -1,0 +1,949 @@
+
+
+<!DOCTYPE html>
+<html lang="zh-CN" data-default-color-scheme=&#34;auto&#34;>
+
+
+
+<head>
+  <meta charset="UTF-8">
+  <link rel="apple-touch-icon" sizes="76x76" href="/img/globe.ico">
+  <link rel="icon" href="/img/globe.ico">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+  <meta http-equiv="x-ua-compatible" content="ie=edge">
+  
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+  
+  <meta name="theme-color" content="#2f4154">
+  <meta name="description" content="">
+  <meta name="author" content="fyz">
+  <meta name="keywords" content="">
+  
+  <title>扫地老僧</title>
+
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/css/bootstrap.min.css" />
+
+
+
+<!-- 主题依赖的图标库，不要自行修改 -->
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1749284_ba1fz6golrf.css">
+
+
+
+<link rel="stylesheet" href="//at.alicdn.com/t/font_1736178_kmeydafke9r.css">
+
+
+<link  rel="stylesheet" href="/css/main.css" />
+
+<!-- 自定义样式保持在最底部 -->
+
+
+  <script id="fluid-configs">
+    var Fluid = window.Fluid || {};
+    var CONFIG = {"hostname":"example.com","root":"/","version":"1.8.10","typing":{"enable":true,"typeSpeed":70,"cursorChar":"_","loop":true},"anchorjs":{"enable":true,"element":"h1,h2,h3,h4,h5,h6","placement":"right","visible":"hover","icon":""},"progressbar":{"enable":true,"height_px":3,"color":"#29d","options":{"showSpinner":false,"trickleSpeed":100}},"copy_btn":true,"image_zoom":{"enable":true,"img_url_replace":["",""]},"toc":{"enable":true,"headingSelector":"h1,h2,h3,h4,h5,h6","collapseDepth":0},"lazyload":{"enable":true,"loading_img":"/img/loading.gif","onlypost":false,"offset_factor":2},"web_analytics":{"enable":true,"baidu":"e050beeb708f14713adb2b820c6c5ee3","google":null,"gtag":null,"tencent":{"sid":null,"cid":null},"woyaola":null,"cnzz":null,"leancloud":{"app_id":null,"app_key":null,"server_url":null}}};
+  </script>
+  <script  src="/js/utils.js" ></script>
+  <script  src="/js/color-schema.js" ></script>
+<meta name="generator" content="Hexo 5.4.0"></head>
+
+
+<body>
+  <header style="height: 30vh;">
+    <nav id="navbar" class="navbar fixed-top  navbar-expand-lg navbar-dark scrolling-navbar">
+  <div class="container">
+    <a class="navbar-brand"
+       href="/">&nbsp;<strong>扫地老僧 - 专注GIS、大数据和AI人工智能领域</strong>&nbsp;</a>
+
+    <button id="navbar-toggler-btn" class="navbar-toggler" type="button" data-toggle="collapse"
+            data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+      <div class="animated-icon"><span></span><span></span><span></span></div>
+    </button>
+
+    <!-- Collapsible content -->
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+      <ul class="navbar-nav ml-auto text-center">
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/">
+                <i class="iconfont icon-home-fill"></i>
+                首页
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/archives/">
+                <i class="iconfont icon-archive-fill"></i>
+                归档
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/categories/">
+                <i class="iconfont icon-category-fill"></i>
+                分类
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/tags/">
+                <i class="iconfont icon-tags-fill"></i>
+                标签
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/about/">
+                <i class="iconfont icon-user-fill"></i>
+                关于
+              </a>
+            </li>
+          
+        
+          
+          
+          
+          
+            <li class="nav-item">
+              <a class="nav-link" href="/personalworks/">
+                <i class="iconfont icon-map"></i>
+                个人作品
+              </a>
+            </li>
+          
+        
+        
+          <li class="nav-item" id="search-btn">
+            <a class="nav-link" target="_self" data-toggle="modal" data-target="#modalSearch">&nbsp;<i
+                class="iconfont icon-search"></i>&nbsp;</a>
+          </li>
+        
+        
+          <li class="nav-item" id="color-toggle-btn">
+            <a class="nav-link" target="_self">&nbsp;<i
+                class="iconfont icon-dark" id="color-toggle-icon"></i>&nbsp;</a>
+          </li>
+        
+      </ul>
+    </div>
+  </div>
+</nav>
+
+    <div class="banner" id="banner" parallax=true
+         style="background: url('/img/banner_img.jpg') no-repeat center center;
+           background-size: cover;">
+      <div class="full-bg-img">
+        <div class="mask flex-center" style="background-color: rgba(0, 0, 0, 0.5)">
+          <div class="page-header text-center fade-in-up">
+            <span class="h2" id="subtitle" title="专注GIS、大数据和AI人工智能领域。虽老矣，尚能饭。">
+              
+            </span>
+
+            
+          </div>
+
+          
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    
+      <div class="container nopadding-x-md">
+        <div class="py-5" id="board"
+          >
+          
+          <div class="container">
+            <div class="row">
+              <div class="col-12 col-md-10 m-auto">
+                
+
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2019/06/25/frist-start/" target="_self">
+          个人博客www.fangyuzhong.com 地址变更
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2019/06/25/frist-start/" target="_self">
+          
+          
+            
+          
+          个人博客www.fangyuzhong.com 目前托管的阿里云虚拟机即将到期，后续将不再使用虚拟机托管，博客www.fangyuzhong.com 全部内容将迁移到https://fangyuzhong2016.github.io 后续域名 www.fangyuzhong.com  也会解析到 https://fangyuzhong2016.github.io 。由此带来的不便，深表歉意！
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2019-06-25 12:18" pubdate>
+              2019-06-25
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E5%8D%9A%E5%AE%A2/">博客</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/www-fangyuzhong-com/">www.fangyuzhong.com</a>
+            
+              <a href="/tags/%E6%96%B0-https-fangyuzhong2016-github-io/">新 https://fangyuzhong2016.github.io</a>
+            
+              <a href="/tags/%E5%8D%9A%E5%AE%A2%E8%BF%81%E7%A7%BB/">博客迁移</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/08/05/IntellijPluginHadoop/011-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件HDFS文件系统常用操作类
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/08/05/IntellijPluginHadoop/011-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节介绍一下使用Hadoop的Java的API进行HDFS的相关操作，包括判断目录、文件是否存在；获目录、文件的ACL权限；获取目录或文件的属性信息；下载目录或文件；上传目录或文件等等。这里我就不做详细分析了，贴出整个类的代码
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-08-05 16:18" pubdate>
+              2017-08-05
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/08/04/IntellijPluginHadoop/010-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件国际化多语言支持设计和实现
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/08/04/IntellijPluginHadoop/010-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          Hadoop-IntelliJ-Plugin 的国际化多语言支持比较简单，直接使用了Java的本地化实现机制。先简单的介绍一下Java的本地化方法。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-08-04 16:18" pubdate>
+              2017-08-04
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/08/03/IntellijPluginHadoop/009-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件文件系统配置设计和实现2
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/08/03/IntellijPluginHadoop/009-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节具体分析一下插件配置中各个具体的配置项设计和实现，包括HDFS连接配置设置、插件系统一般配置中国际化语言支持和浏览器树展现方式配置。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-08-03 16:17" pubdate>
+              2017-08-03
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/08/02/IntellijPluginHadoop/008-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件文件系统配置设计和实现1
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/08/02/IntellijPluginHadoop/008-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          HDFS文件系统浏览器的配置设置分为两部分，一个是配置的基础类，涉及到对象的持久化写入，该部分定义相关的接口和抽象类的实现；另一部分是具体的对象持久化配置，包括HDFS连接配置持久化和整个系统的通用配置（国际化多语言的支持和文件树展现方式）持久化。本节讲解配置的基础类
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-08-02 16:17" pubdate>
+              2017-08-02
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/08/01/IntellijPluginHadoop/007-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件HDFS文件系统对象的设计与实现
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/08/01/IntellijPluginHadoop/007-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节，简单介绍HDFS文件系统浏览器的文件系统对象。文件系统对象和HDFS文件系统对象一致，分为目录和文件，文件不再进行具体的区分文件类型。文件系统对象在UI上表现为文件系统树上的节点.
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-08-01 16:17" pubdate>
+              2017-08-01
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/07/31/IntellijPluginHadoop/006-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件HDFS文件系统连接Connection设计和实现
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/07/31/IntellijPluginHadoop/006-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节，主要介绍Hadoop-IntelliJ-Plugin 的HDFS连接处理的设计和实现。主要包括HDFS连接Connection的接口定义、HDFS连接的实现、HDFS连接的缓存处理、和连接相关配置项。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-07-31 16:17" pubdate>
+              2017-07-31
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/07/30/IntellijPluginHadoop/005-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现3
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/07/30/IntellijPluginHadoop/005-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节，简单介绍一下，HDFS文件系统浏览器的管理，FileSystemBrowserManager和扩展IDEA浮动面板的实现
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-07-30 16:17" pubdate>
+              2017-07-30
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现2
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/07/29/IntellijPluginHadoop/004-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节，将详细说明一下文件系统树UI层的展示设计和实现。文件系统对象以树的方式展示，在IntelliJ 框架内，文件树依附于浮动面板，即IntelliJ 的ToolWindow 插件。UI需要有层次感，IntelliJ  的 ToolWindow 作为文件系统UI的最底层，由IDEA 框架去维护和控制；在ToolWindow上面，需要有个主窗体ToolWindowForm，该窗体上将会呈现文件系统Tree的UI和文件系统对象的相关属性UI；由于可能存在多个连接，连接到HDFS，因此会存在多个文件系统Tree，因此文件系统Tree 的UI将分为两种方式呈现，一种以Tab列表的方式平铺，另一种，以单个树根节点的方式呈现，因此，需要有TabbedBrowsForm  和 SimpleBrowserForm 两种UI，在这两种UI之上，才真正显示出文件系统的Tree控件。因此本节也将从这几个方面来介绍。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-07-29 16:17" pubdate>
+              2017-07-29
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+  <div class="row mx-auto index-card">
+    
+    
+    <article class="col-12 col-md-12 mx-auto index-info">
+      <h1 class="index-header">
+        
+        <a href="/2017/07/28/IntellijPluginHadoop/003-IntellijPluginHadoop/" target="_self">
+          HadoopIntellijPlugin插件HDFS文件系统浏览器设计和实现1
+        </a>
+      </h1>
+
+      <p class="index-excerpt">
+        <a href="/2017/07/28/IntellijPluginHadoop/003-IntellijPluginHadoop/" target="_self">
+          
+          
+            
+          
+          本节说明文件系统树节点的设计与实现。IntelliJ Plugin for  Hadoop 插件 在开发和设计上，很大程度上借鉴了  DB Navigator  插件的设计和实现。DB Navigator是一款基于IntelliJ IDEA数据库管理的优秀插件，该插件目前好像是开源的，地址在  https://plugins.jetbrains.com/plugin/1800-database-navigator  官方插件库，提供的源码不是最新的(源码无法编译)，但可以下载下来进行参考。
+        </a>
+      </p>
+
+      <div class="index-btm post-metas">
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-date"></i>
+            <time datetime="2017-07-28 16:17" pubdate>
+              2017-07-28
+            </time>
+          </div>
+        
+        
+          <div class="post-meta mr-3">
+            <i class="iconfont icon-category"></i>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/">个人作品</a>
+            
+              <a href="/categories/%E4%B8%AA%E4%BA%BA%E4%BD%9C%E5%93%81/IntelliJ-Plugin-For-Hadoop/">IntelliJ Plugin For Hadoop</a>
+            
+          </div>
+        
+        
+          <div class="post-meta">
+            <i class="iconfont icon-tags"></i>
+            
+              <a href="/tags/Intellij-Plugin/">Intellij Plugin</a>
+            
+              <a href="/tags/Hadoop/">Hadoop</a>
+            
+              <a href="/tags/IDEA/">IDEA</a>
+            
+          </div>
+        
+      </div>
+    </article>
+  </div>
+
+
+
+  <nav aria-label="navigation">
+    <span class="pagination" id="pagination">
+      <span class="page-number current">1</span><a class="page-number" href="/page/2/#board">2</a><a class="extend next" rel="next" href="/page/2/#board"><i class="iconfont icon-arrowright"></i></a>
+    </span>
+  </nav>
+
+
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    
+
+    
+      <a id="scroll-top-button" href="#" role="button">
+        <i class="iconfont icon-arrowup" aria-hidden="true"></i>
+      </a>
+    
+
+    
+      <div class="modal fade" id="modalSearch" tabindex="-1" role="dialog" aria-labelledby="ModalLabel"
+     aria-hidden="true">
+  <div class="modal-dialog modal-dialog-scrollable modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header text-center">
+        <h4 class="modal-title w-100 font-weight-bold">搜索</h4>
+        <button type="button" id="local-search-close" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body mx-3">
+        <div class="md-form mb-5">
+          <input type="text" id="local-search-input" class="form-control validate">
+          <label data-error="x" data-success="v"
+                 for="local-search-input">关键词</label>
+        </div>
+        <div class="list-group" id="local-search-result"></div>
+      </div>
+    </div>
+  </div>
+</div>
+    
+
+    
+  </main>
+
+  <footer class="text-center mt-5 py-3">
+  <div class="footer-content">
+     <a href="https://hexo.io" target="_blank" rel="nofollow noopener"><span>博客使用Hexo搭建</span></a> <i class="iconfont icon-love"></i> <a href="https://github.com/fluid-dev/hexo-theme-fluid" target="_blank" rel="nofollow noopener"><span>博客风格模板Fluid</span></a> <div> <span id="timeDate">载入天数...</span> <span id="times">载入时分秒...</span> <script src="/js/duration.js"></script> </div> 
+  </div>
+  
+  <div class="statistics">
+    
+    
+
+    
+      
+        <!-- 不蒜子统计PV -->
+        <span id="busuanzi_container_site_pv" style="display: none">
+            总访问量 
+            <span id="busuanzi_value_site_pv"></span>
+             次
+          </span>
+      
+      
+        <!-- 不蒜子统计UV -->
+        <span id="busuanzi_container_site_uv" style="display: none">
+            总访客数 
+            <span id="busuanzi_value_site_uv"></span>
+             人
+          </span>
+      
+    
+  </div>
+
+
+  
+
+  
+</footer>
+
+
+  <!-- SCRIPTS -->
+  
+  <script  src="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.js" ></script>
+  <link  rel="stylesheet" href="https://cdn.jsdelivr.net/npm/nprogress@0.2.0/nprogress.min.css" />
+
+  <script>
+    NProgress.configure({"showSpinner":false,"trickleSpeed":100})
+    NProgress.start()
+    window.addEventListener('load', function() {
+      NProgress.done();
+    })
+  </script>
+
+
+<script  src="https://cdn.jsdelivr.net/npm/jquery@3.6.0/dist/jquery.min.js" ></script>
+<script  src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.3/dist/js/bootstrap.min.js" ></script>
+<script  src="/js/events.js" ></script>
+<script  src="/js/plugins.js" ></script>
+
+<!-- Plugins -->
+
+
+  
+    <script  src="/js/img-lazyload.js" ></script>
+  
+
+
+
+  
+
+
+
+
+
+
+
+
+
+  <script defer src="https://cdn.jsdelivr.net/npm/clipboard@2.0.8/dist/clipboard.min.js" ></script>
+
+
+
+  <script defer src="https://busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js" ></script>
+
+
+
+
+  <script  src="https://cdn.jsdelivr.net/npm/typed.js@2.0.11/lib/typed.min.js" ></script>
+  <script>
+    (function (window, document) {
+      var typing = Fluid.plugins.typing;
+      var title = document.getElementById('subtitle').title;
+      
+      typing(title)
+      
+    })(window, document);
+  </script>
+
+
+
+  <script  src="/js/local-search.js" ></script>
+  <script>
+    (function () {
+      var path = "/local-search.xml";
+      $('#local-search-input').on('click', function() {
+        searchFunc(path, 'local-search-input', 'local-search-result');
+      });
+      $('#modalSearch').on('shown.bs.modal', function() {
+        $('#local-search-input').focus();
+      });
+    })()
+  </script>
+
+
+
+
+
+
+
+
+
+
+
+
+  
+    <!-- Baidu Analytics -->
+    <script defer>
+      var _hmt = _hmt || [];
+      (function () {
+        var hm = document.createElement("script");
+        hm.src = "https://hm.baidu.com/hm.js?e050beeb708f14713adb2b820c6c5ee3";
+        var s = document.getElementsByTagName("script")[0];
+        s.parentNode.insertBefore(hm, s);
+      })();
+    </script>
+  
+
+  
+
+  
+
+  
+
+  
+
+  
+
+
+
+
+
+<!-- 主题的启动项 保持在最底部 -->
+<script  src="/js/boot.js" ></script>
+
+
+</body>
+</html>
